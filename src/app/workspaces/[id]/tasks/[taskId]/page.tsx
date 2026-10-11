@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import AppHeader from "@/components/AppHeader";
-import RequireAuth from "@/components/RequireAuth";
 import {
   Task,
   WorkspaceMember,
@@ -21,14 +19,6 @@ import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
 
 export default function TaskDetailPage() {
-  return (
-    <RequireAuth>
-      <TaskDetailInner />
-    </RequireAuth>
-  );
-}
-
-function TaskDetailInner() {
   const params = useParams();
   const workspaceId = Number(params.id);
   const taskId = Number(params.taskId);
@@ -139,7 +129,7 @@ function TaskDetailInner() {
     if (!token || !confirm("この課題を削除しますか？")) return;
     try {
       await deleteTask(token, workspaceId, taskId);
-      router.push(`/workspaces/${workspaceId}`);
+      router.push(`/workspaces/${workspaceId}/tasks`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "削除に失敗しました");
     }
@@ -173,19 +163,15 @@ function TaskDetailInner() {
   }
 
   if (loading) {
-    return (
-      <div className="shell">
-        <AppHeader />
-        <p className="muted">読み込み中…</p>
-      </div>
-    );
+    return <p className="muted">読み込み中…</p>;
   }
 
   return (
-    <div className="shell">
-      <AppHeader />
+    <>
       <p className="muted">
-        <Link href={`/workspaces/${workspaceId}`}>← 課題一覧</Link>
+        <Link href={`/workspaces/${workspaceId}/tasks`}>← 課題一覧</Link>
+        {" · "}
+        <Link href={`/workspaces/${workspaceId}`}>ダッシュボード</Link>
       </p>
       <h2 className="hero-title" style={{ fontSize: "1.7rem" }}>
         課題 #{taskId}
@@ -355,6 +341,6 @@ function TaskDetailInner() {
           )}
         </div>
       </section>
-    </div>
+    </>
   );
 }

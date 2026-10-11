@@ -1,58 +1,41 @@
 "use client";
 
-import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import AppHeader from "@/components/AppHeader";
-import RequireAuth from "@/components/RequireAuth";
+import TaskListItem from "@/components/TaskListItem";
 import {
   Task,
   Workspace,
-  WorkspaceMember,
   createInvite,
-  createTask,
-  listMembers,
-  listTasks,
   getWorkspace,
+  listTasks,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { ISSUE_TYPES, PRIORITIES, STATUSES, labelOf } from "@/lib/labels";
 
-export default function WorkspacePage() {
-  return (
-    <RequireAuth>
-      <WorkspaceInner />
-    </RequireAuth>
-  );
-}
+const RECENT_LIMIT = 8;
 
-function WorkspaceInner() {
+export default function WorkspaceDashboardPage() {
   const params = useParams();
   const workspaceId = Number(params.id);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [ws, setWs] = useState<Workspace | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [members, setMembers] = useState<WorkspaceMember[]>([]);
-  const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!token || !workspaceId) return;
     let cancelled = false;
     (async () => {
       try {
-        const [w, t, m] = await Promise.all([
+        const [w, t] = await Promise.all([
           getWorkspace(token, workspaceId),
           listTasks(token, workspaceId),
-          listMembers(token, workspaceId),
         ]);
         if (!cancelled) {
           setWs(w);
           setTasks(t);
-          setMembers(m);
         }
       } catch (err) {
         if (!cancelled) {
@@ -67,26 +50,11 @@ function WorkspaceInner() {
     };
   }, [token, workspaceId]);
 
-  async function onCreateTask(e: FormEvent) {
-    e.preventDefault();
-    if (!token || !title.trim()) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const task = await createTask(token, workspaceId, {
-        title: title.trim(),
-        issue_type: "task",
-        status: "open",
-        priority: "medium",
-      });
-      setTasks((prev) => [task, ...prev]);
-      setTitle("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "作成に失敗しました");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const recent = useMemo(() => tasks.slice(0, RECENT_LIMIT), [tasks]);
+  const mine = useMemo(
+    () => tasks.filter((t) => user && t.assignee_id === user.id),
+    [tasks, user],
+  );
 
   async function onInvite() {
     if (!token) return;
@@ -101,107 +69,67 @@ function WorkspaceInner() {
     }
   }
 
+  if (loading) {
+    return <p className="muted">読み込み中…</p>;
+  }
+
   return (
-    <div className="shell">
-      <AppHeader />
-      {loading ? (
-        <p className="muted">読み込み中…</p>
-      ) : (
-        <>
-          <div className="section-head">
-            <div>
-              <p className="muted" style={{ margin: "0 0 0.25rem" }}>
-                <Link href="/workspaces">ワークスペース</Link>
-              </p>
-              <h2 className="hero-title" style={{ fontSize: "1.8rem" }}>
-                {ws?.name ?? "ワークスペース"}
-              </h2>
-            </div>
-            {ws?.my_role === "admin" ? (
-              <button type="button" className="btn btn-ghost" onClick={onInvite}>
-                招待リンクを発行
-              </button>
-            ) : null}
-          </div>
+    <>
+      <div className="section-head">
+        <div>
+          <h2 className="hero-title" style={{ fontSize: "1.8rem" }}>
+            {ws?.name ?? "ダッシュボード"}
+          </h2>
+          <p className="lede" style={{ marginBottom: 0 }}>
+            最近更新された課題と、自分の担当課題を確認します。
+          </p>
+        </div>
+        {ws?.my_role === "admin" ? (
+          <button type="button" className="btn btn-ghost" onClick={onInvite}>
+            招待リンクを発行
+          </button>
+        ) : null}
+      </div>
 
-          {inviteUrl ? (
-            <p className="panel muted" style={{ marginBottom: "1rem" }}>
-              招待リンク（クリップボードにコピー済み）: <code>{inviteUrl}</code>
-            </p>
-          ) : null}
+      {inviteUrl ? (
+        <p className="panel muted" style={{ marginBottom: "1rem" }}>
+          招待リンク（クリップボードにコピー済み）: <code>{inviteUrl}</code>
+        </p>
+      ) : null}
 
-          <section className="panel stack" style={{ marginBottom: "1rem" }}>
-            <h3 style={{ margin: 0, fontSize: "1rem" }}>メンバー</h3>
-            <div className="row">
-              {members.map((m) => (
-                <span key={m.id} className="badge">
-                  {m.display_name}（{m.role === "admin" ? "管理者" : "メンバー"}）
-                </span>
-              ))}
-            </div>
-          </section>
+      {error ? <p className="error">{error}</p> : null}
 
-          <section className="panel stack">
-            <div className="section-head">
-              <h3 style={{ margin: 0, fontSize: "1.05rem" }}>課題一覧</h3>
-              <span className="muted">{tasks.length} 件</span>
-            </div>
+      <section className="panel stack" style={{ marginBottom: "1rem" }}>
+        <div className="section-head">
+          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>最近のタスク</h3>
+          <span className="muted">{recent.length} 件</span>
+        </div>
+        {recent.length === 0 ? (
+          <p className="empty">課題はまだありません</p>
+        ) : (
+          <ul className="list">
+            {recent.map((task) => (
+              <TaskListItem key={task.id} task={task} workspaceId={workspaceId} />
+            ))}
+          </ul>
+        )}
+      </section>
 
-            <form className="row" onSubmit={onCreateTask}>
-              <input
-                style={{ flex: 1, minWidth: 0 }}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="新しい課題の件名"
-                maxLength={500}
-              />
-              <button className="btn btn-primary" type="submit" disabled={busy || !title.trim()}>
-                追加
-              </button>
-            </form>
-
-            {error ? <p className="error">{error}</p> : null}
-
-            {tasks.length === 0 ? (
-              <p className="empty">課題はまだありません</p>
-            ) : (
-              <ul className="list">
-                {tasks.map((task) => (
-                  <li key={task.id} className="list-item">
-                    <div>
-                      <Link
-                        className="title"
-                        href={`/workspaces/${workspaceId}/tasks/${task.id}`}
-                      >
-                        #{task.id} {task.title}
-                      </Link>
-                      <div className="meta">
-                        <span className="badge">{labelOf(ISSUE_TYPES, task.issue_type)}</span>
-                        <span className="badge ok">{labelOf(STATUSES, task.status)}</span>
-                        <span className="badge warn">
-                          優先度 {labelOf(PRIORITIES, task.priority)}
-                        </span>
-                        {task.assignee_name ? (
-                          <span className="badge">担当: {task.assignee_name}</span>
-                        ) : null}
-                        {task.parent_id ? (
-                          <span className="badge">親 #{task.parent_id}</span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <Link
-                      className="btn btn-ghost"
-                      href={`/workspaces/${workspaceId}/tasks/${task.id}`}
-                    >
-                      詳細
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
-      )}
-    </div>
+      <section className="panel stack">
+        <div className="section-head">
+          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>自分の担当</h3>
+          <span className="muted">{mine.length} 件</span>
+        </div>
+        {mine.length === 0 ? (
+          <p className="empty">担当している課題はありません</p>
+        ) : (
+          <ul className="list">
+            {mine.map((task) => (
+              <TaskListItem key={task.id} task={task} workspaceId={workspaceId} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
   );
 }
