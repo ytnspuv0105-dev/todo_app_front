@@ -70,6 +70,11 @@ export default function WorkspaceShell({ workspaceId, children }: Props) {
       label: "課題を追加",
       match: (p) => p.startsWith(`${base}/tasks/new`),
     },
+    {
+      href: `${base}/gantt`,
+      label: "ガントチャート",
+      match: (p) => p === `${base}/gantt` || p === `${base}/gantt/`,
+    },
   ];
 
   const nav = (
