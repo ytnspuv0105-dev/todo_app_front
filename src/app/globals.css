@@ -873,6 +873,13 @@ a.task-number:hover {
   font-weight: 700;
 }
 
+.gantt-tick.is-today {
+  color: var(--accent-2);
+  font-weight: 700;
+  background: rgba(44, 106, 79, 0.12);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

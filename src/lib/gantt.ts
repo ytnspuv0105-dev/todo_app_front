@@ -49,6 +49,11 @@ export function formatTickLabel(d: Date): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
+/** Local calendar date for "today" in the browser timezone (time zeroed). */
+export function localToday(now = new Date()): Date {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 export function addDays(d: Date, n: number): Date {
   const next = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   next.setDate(next.getDate() + n);
@@ -162,6 +167,11 @@ export function buildGanttModel(
 
     rangeStart = addCalendarMonths(contentStart!, -1);
     rangeEnd = addCalendarMonths(contentEnd!, 1);
+
+    // Ensure the system local date is inside the scrollable range.
+    const today = localToday();
+    if (today.getTime() < rangeStart.getTime()) rangeStart = today;
+    if (today.getTime() > rangeEnd.getTime()) rangeEnd = today;
   }
 
   const dayCount = dayDiff(rangeStart, rangeEnd) + 1;

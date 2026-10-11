@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   CSSProperties,
   PointerEvent as ReactPointerEvent,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -13,8 +14,10 @@ import { Task, updateTask } from "@/lib/api";
 import {
   addDays,
   buildGanttModel,
+  dayDiff,
   formatDateOnly,
   formatTickLabel,
+  localToday,
 } from "@/lib/gantt";
 import { formatTaskNumber } from "@/lib/taskDisplay";
 
@@ -69,6 +72,10 @@ export default function AssigneeGantt({
   const dragRef = useRef<DragSession | null>(null);
   const suppressClickRef = useRef(false);
   const movedRef = useRef(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const didInitialScrollRef = useRef(false);
+  const today = useMemo(() => localToday(), []);
+  const todayKey = formatDateOnly(today);
 
   const displayTasks = useMemo(
     () =>
@@ -89,6 +96,15 @@ export default function AssigneeGantt({
       rangeEnd: committedModel.rangeEnd,
     });
   }, [committedModel, displayTasks]);
+
+  // First paint: put today near the left edge of the timeline viewport.
+  useEffect(() => {
+    if (!model || !scrollRef.current || didInitialScrollRef.current) return;
+    const idx = dayDiff(model.rangeStart, today);
+    if (idx < 0 || idx >= model.dayCount) return;
+    scrollRef.current.scrollLeft = idx * DAY_PX;
+    didInitialScrollRef.current = true;
+  }, [model, today]);
 
   function previewDrag(clientX: number) {
     const drag = dragRef.current;
@@ -255,7 +271,12 @@ export default function AssigneeGantt({
         バーの端をドラッグすると開始日・期限日を変更できます。
       </p>
       {error ? <p className="error">{error}</p> : null}
-      <div className="gantt-scroll" role="region" aria-label="ガントチャート">
+      <div
+        className="gantt-scroll"
+        role="region"
+        aria-label="ガントチャート"
+        ref={scrollRef}
+      >
         <div
           className="gantt-grid"
           style={
@@ -268,16 +289,21 @@ export default function AssigneeGantt({
         >
           <div className="gantt-corner">課題</div>
           <div className="gantt-head" style={{ width: timelineWidth }}>
-            {days.map((d) => (
-              <div
-                key={formatDateOnly(d)}
-                className={`gantt-tick${d.getDate() === 1 ? " is-month" : ""}`}
-                style={{ width: DAY_PX }}
-                title={formatDateOnly(d)}
-              >
-                {formatTickLabel(d)}
-              </div>
-            ))}
+            {days.map((d) => {
+              const key = formatDateOnly(d);
+              const isToday = key === todayKey;
+              return (
+                <div
+                  key={key}
+                  className={`gantt-tick${d.getDate() === 1 ? " is-month" : ""}${isToday ? " is-today" : ""}`}
+                  style={{ width: DAY_PX }}
+                  title={isToday ? `${key}（今日）` : key}
+                  data-gantt-today={isToday ? "true" : undefined}
+                >
+                  {formatTickLabel(d)}
+                </div>
+              );
+            })}
           </div>
 
           {groups.map((group) => (
