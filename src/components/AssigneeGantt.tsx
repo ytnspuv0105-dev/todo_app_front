@@ -22,7 +22,7 @@ export default function AssigneeGantt({ workspaceId, tasks }: Props) {
     );
   }
 
-  const { dayCount, days, rows, rangeStart, rangeEnd } = model;
+  const { dayCount, days, groups, rangeStart, rangeEnd } = model;
   const timelineWidth = dayCount * DAY_PX;
 
   return (
@@ -41,7 +41,7 @@ export default function AssigneeGantt({ workspaceId, tasks }: Props) {
             } as CSSProperties
           }
         >
-          <div className="gantt-corner">担当者</div>
+          <div className="gantt-corner">課題</div>
           <div className="gantt-head" style={{ width: timelineWidth }}>
             {days.map((d) => (
               <div
@@ -55,35 +55,48 @@ export default function AssigneeGantt({ workspaceId, tasks }: Props) {
             ))}
           </div>
 
-          {rows.map((row) => (
-            <div className="gantt-row" key={row.key}>
-              <div className="gantt-assignee">{row.label}</div>
-              <div className="gantt-lanes" style={{ width: timelineWidth }}>
-                <div
-                  className="gantt-day-lines"
-                  aria-hidden
-                  style={{
-                    backgroundSize: `${DAY_PX}px 100%`,
-                  }}
-                />
-                {row.bars.map((bar) => {
-                  const left = bar.startIndex * DAY_PX;
-                  const width = Math.max(bar.daySpan * DAY_PX - 4, DAY_PX - 4);
-                  const label = `${formatTaskNumber(bar.task.number)} ${bar.task.title}`;
-                  return (
-                    <div className="gantt-lane" key={bar.task.id}>
+          {groups.map((group) => (
+            <div className="gantt-group" key={group.key}>
+              <div className="gantt-group-label">{group.label}</div>
+              <div
+                className="gantt-group-span"
+                style={{ width: timelineWidth }}
+                aria-hidden
+              />
+
+              {group.bars.map((bar) => {
+                const left = bar.startIndex * DAY_PX;
+                const width = Math.max(bar.daySpan * DAY_PX - 4, DAY_PX - 4);
+                const label = `${formatTaskNumber(bar.task.number)} ${bar.task.title}`;
+                const href = `/workspaces/${workspaceId}/tasks/${bar.task.id}`;
+                const dateTitle = `${label}（${formatDateOnly(bar.start)} ～ ${formatDateOnly(bar.end)}）`;
+                return (
+                  <div className="gantt-row" key={bar.task.id}>
+                    <Link
+                      href={href}
+                      className="gantt-task-label"
+                      title={label}
+                    >
+                      <span className="gantt-task-number">
+                        {formatTaskNumber(bar.task.number)}
+                      </span>
+                      <span className="gantt-task-title">{bar.task.title}</span>
+                    </Link>
+                    <div className="gantt-track" style={{ width: timelineWidth }}>
+                      <div className="gantt-day-lines" aria-hidden />
                       <Link
-                        href={`/workspaces/${workspaceId}/tasks/${bar.task.id}`}
+                        href={href}
                         className="gantt-bar"
                         style={{ left, width }}
-                        title={`${label}（${formatDateOnly(bar.start)} ～ ${formatDateOnly(bar.end)}）`}
+                        title={dateTitle}
+                        aria-label={dateTitle}
                       >
-                        <span className="gantt-bar-text">{label}</span>
+                        <span className="sr-only">{dateTitle}</span>
                       </Link>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>

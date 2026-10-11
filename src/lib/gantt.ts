@@ -8,7 +8,7 @@ export type GanttBar = {
   daySpan: number;
 };
 
-export type GanttRow = {
+export type GanttGroup = {
   key: string;
   label: string;
   bars: GanttBar[];
@@ -76,7 +76,7 @@ export function buildGanttModel(tasks: Task[]): {
   rangeEnd: Date;
   dayCount: number;
   days: Date[];
-  rows: GanttRow[];
+  groups: GanttGroup[];
 } | null {
   const dated: { task: Task; start: Date; end: Date }[] = [];
   for (const task of tasks) {
@@ -96,7 +96,7 @@ export function buildGanttModel(tasks: Task[]): {
   const dayCount = dayDiff(rangeStart, rangeEnd) + 1;
   const days = Array.from({ length: dayCount }, (_, i) => addDays(rangeStart, i));
 
-  const groups = new Map<string, GanttRow>();
+  const groupsMap = new Map<string, GanttGroup>();
   for (const item of dated) {
     const key =
       item.task.assignee_id == null ? "unassigned" : `u:${item.task.assignee_id}`;
@@ -104,12 +104,12 @@ export function buildGanttModel(tasks: Task[]): {
       item.task.assignee_id == null
         ? "未設定"
         : item.task.assignee_name?.trim() || `ユーザー ${item.task.assignee_id}`;
-    let row = groups.get(key);
-    if (!row) {
-      row = { key, label, bars: [] };
-      groups.set(key, row);
+    let group = groupsMap.get(key);
+    if (!group) {
+      group = { key, label, bars: [] };
+      groupsMap.set(key, group);
     }
-    row.bars.push({
+    group.bars.push({
       task: item.task,
       start: item.start,
       end: item.end,
@@ -118,19 +118,19 @@ export function buildGanttModel(tasks: Task[]): {
     });
   }
 
-  for (const row of groups.values()) {
-    row.bars.sort((a, b) => {
+  for (const group of groupsMap.values()) {
+    group.bars.sort((a, b) => {
       const byStart = a.startIndex - b.startIndex;
       if (byStart !== 0) return byStart;
       return a.task.number - b.task.number;
     });
   }
 
-  const rows = [...groups.values()].sort((a, b) => {
+  const groups = [...groupsMap.values()].sort((a, b) => {
     if (a.key === "unassigned") return 1;
     if (b.key === "unassigned") return -1;
     return a.label.localeCompare(b.label, "ja");
   });
 
-  return { rangeStart, rangeEnd, dayCount, days, rows };
+  return { rangeStart, rangeEnd, dayCount, days, groups };
 }
