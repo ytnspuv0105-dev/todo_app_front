@@ -80,7 +80,15 @@ export default function AssigneeGantt({
     [tasks, drafts],
   );
 
-  const model = buildGanttModel(displayTasks);
+  // Keep axis padded from committed tasks so drag previews do not shrink the range.
+  const committedModel = useMemo(() => buildGanttModel(tasks), [tasks]);
+  const model = useMemo(() => {
+    if (!committedModel) return buildGanttModel(displayTasks);
+    return buildGanttModel(displayTasks, {
+      rangeStart: committedModel.rangeStart,
+      rangeEnd: committedModel.rangeEnd,
+    });
+  }, [committedModel, displayTasks]);
 
   function previewDrag(clientX: number) {
     const drag = dragRef.current;

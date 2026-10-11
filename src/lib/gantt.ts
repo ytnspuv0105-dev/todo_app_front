@@ -100,7 +100,10 @@ export function taskBarRange(task: Task): {
   };
 }
 
-export function buildGanttModel(tasks: Task[]): {
+export function buildGanttModel(
+  tasks: Task[],
+  rangeLock?: { rangeStart: Date; rangeEnd: Date },
+): {
   rangeStart: Date;
   rangeEnd: Date;
   dayCount: number;
@@ -121,37 +124,45 @@ export function buildGanttModel(tasks: Task[]): {
   }
   if (!dated.length) return null;
 
-  let earliestStart: Date | null = null;
-  let latestDue: Date | null = null;
-  for (const item of dated) {
-    if (item.hasStartDate) {
-      if (!earliestStart || item.start.getTime() < earliestStart.getTime()) {
-        earliestStart = item.start;
-      }
-    }
-    if (item.hasDueDate) {
-      if (!latestDue || item.end.getTime() > latestDue.getTime()) {
-        latestDue = item.end;
-      }
-    }
-  }
+  let rangeStart: Date;
+  let rangeEnd: Date;
 
-  // Fall back to bar extents when only one side of dates exists among included tasks.
-  let contentStart = earliestStart;
-  let contentEnd = latestDue;
-  if (!contentStart || !contentEnd) {
+  if (rangeLock) {
+    rangeStart = rangeLock.rangeStart;
+    rangeEnd = rangeLock.rangeEnd;
+  } else {
+    let earliestStart: Date | null = null;
+    let latestDue: Date | null = null;
     for (const item of dated) {
-      if (!contentStart || item.start.getTime() < contentStart.getTime()) {
-        contentStart = item.start;
+      if (item.hasStartDate) {
+        if (!earliestStart || item.start.getTime() < earliestStart.getTime()) {
+          earliestStart = item.start;
+        }
       }
-      if (!contentEnd || item.end.getTime() > contentEnd.getTime()) {
-        contentEnd = item.end;
+      if (item.hasDueDate) {
+        if (!latestDue || item.end.getTime() > latestDue.getTime()) {
+          latestDue = item.end;
+        }
       }
     }
-  }
 
-  const rangeStart = addCalendarMonths(contentStart!, -1);
-  const rangeEnd = addCalendarMonths(contentEnd!, 1);
+    // Fall back to bar extents when only one side of dates exists among included tasks.
+    let contentStart = earliestStart;
+    let contentEnd = latestDue;
+    if (!contentStart || !contentEnd) {
+      for (const item of dated) {
+        if (!contentStart || item.start.getTime() < contentStart.getTime()) {
+          contentStart = item.start;
+        }
+        if (!contentEnd || item.end.getTime() > contentEnd.getTime()) {
+          contentEnd = item.end;
+        }
+      }
+    }
+
+    rangeStart = addCalendarMonths(contentStart!, -1);
+    rangeEnd = addCalendarMonths(contentEnd!, 1);
+  }
 
   const dayCount = dayDiff(rangeStart, rangeEnd) + 1;
   const days = Array.from({ length: dayCount }, (_, i) => addDays(rangeStart, i));
