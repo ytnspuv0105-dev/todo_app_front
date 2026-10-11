@@ -42,7 +42,7 @@ http://localhost:3000 を開きます。
 | 画面 | パス |
 |------|------|
 | ダッシュボード（最近のタスク / 自分の担当） | `/workspaces/{id}` |
-| 課題一覧 | `/workspaces/{id}/tasks` |
+| 課題一覧（テーブル・種別/状態/担当者フィルタ） | `/workspaces/{id}/tasks` |
 | 課題追加 | `/workspaces/{id}/tasks/new` |
 | 課題詳細 | `/workspaces/{id}/tasks/{taskId}` |
 
