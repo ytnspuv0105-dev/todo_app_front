@@ -30,6 +30,7 @@ export default function TaskDetailPage() {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [siblings, setSiblings] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +46,17 @@ export default function TaskDetailPage() {
   const [milestone, setMilestone] = useState("");
   const [parentNumber, setParentNumber] = useState("");
   const [relatedNumbers, setRelatedNumbers] = useState("");
+
+  function beginEdit<T>(setter: (value: T) => void) {
+    return (value: T) => {
+      setSaveNotice(null);
+      setter(value);
+    };
+  }
+
+  useEffect(() => {
+    setSaveNotice(null);
+  }, [workspaceId, taskId]);
 
   useEffect(() => {
     if (!token) return;
@@ -119,7 +131,9 @@ export default function TaskDetailPage() {
         related_task_numbers: related,
       });
       setTask(updated);
+      setSaveNotice("更新しました");
     } catch (err) {
+      setSaveNotice(null);
       setError(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {
       setBusy(false);
@@ -174,6 +188,11 @@ export default function TaskDetailPage() {
         {" · "}
         <Link href={`/workspaces/${workspaceId}`}>ダッシュボード</Link>
       </p>
+      {saveNotice ? (
+        <p className="save-notice" role="status">
+          {saveNotice}
+        </p>
+      ) : null}
       <div className="task-detail-head">
         <span className="task-number task-number-lg" aria-label="課題番号">
           {task ? formatTaskNumber(task.number) : "…"}
@@ -188,7 +207,10 @@ export default function TaskDetailPage() {
           <div className="grid-2">
             <label className="field">
               種別
-              <select value={issueType} onChange={(e) => setIssueType(e.target.value)}>
+              <select
+                value={issueType}
+                onChange={(e) => beginEdit(setIssueType)(e.target.value)}
+              >
                 {ISSUE_TYPES.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
@@ -198,7 +220,10 @@ export default function TaskDetailPage() {
             </label>
             <label className="field">
               状態
-              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <select
+                value={status}
+                onChange={(e) => beginEdit(setStatus)(e.target.value)}
+              >
                 {STATUSES.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
@@ -210,18 +235,29 @@ export default function TaskDetailPage() {
 
           <label className="field">
             件名
-            <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={500} />
+            <input
+              value={title}
+              onChange={(e) => beginEdit(setTitle)(e.target.value)}
+              required
+              maxLength={500}
+            />
           </label>
 
           <label className="field">
             詳細
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+            <textarea
+              value={description}
+              onChange={(e) => beginEdit(setDescription)(e.target.value)}
+            />
           </label>
 
           <div className="grid-2">
             <label className="field">
               優先度
-              <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <select
+                value={priority}
+                onChange={(e) => beginEdit(setPriority)(e.target.value)}
+              >
                 {PRIORITIES.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
@@ -231,7 +267,10 @@ export default function TaskDetailPage() {
             </label>
             <label className="field">
               担当者
-              <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <select
+                value={assigneeId}
+                onChange={(e) => beginEdit(setAssigneeId)(e.target.value)}
+              >
                 <option value="">未設定</option>
                 {members.map((m) => (
                   <option key={m.user_id} value={m.user_id}>
@@ -245,22 +284,38 @@ export default function TaskDetailPage() {
           <div className="grid-2">
             <label className="field">
               開始日
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => beginEdit(setStartDate)(e.target.value)}
+              />
             </label>
             <label className="field">
               期限日
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => beginEdit(setDueDate)(e.target.value)}
+              />
             </label>
           </div>
 
           <div className="grid-2">
             <label className="field">
               カテゴリー
-              <input value={category} onChange={(e) => setCategory(e.target.value)} maxLength={120} />
+              <input
+                value={category}
+                onChange={(e) => beginEdit(setCategory)(e.target.value)}
+                maxLength={120}
+              />
             </label>
             <label className="field">
               マイルストーン
-              <input value={milestone} onChange={(e) => setMilestone(e.target.value)} maxLength={120} />
+              <input
+                value={milestone}
+                onChange={(e) => beginEdit(setMilestone)(e.target.value)}
+                maxLength={120}
+              />
             </label>
           </div>
 
@@ -269,7 +324,7 @@ export default function TaskDetailPage() {
               親課題
               <select
                 value={parentNumber}
-                onChange={(e) => setParentNumber(e.target.value)}
+                onChange={(e) => beginEdit(setParentNumber)(e.target.value)}
               >
                 <option value="">なし</option>
                 {siblings.map((s) => (
@@ -283,7 +338,7 @@ export default function TaskDetailPage() {
               関連課題（番号をカンマ区切り）
               <input
                 value={relatedNumbers}
-                onChange={(e) => setRelatedNumbers(e.target.value)}
+                onChange={(e) => beginEdit(setRelatedNumbers)(e.target.value)}
                 placeholder="例: 1, 3"
               />
             </label>
