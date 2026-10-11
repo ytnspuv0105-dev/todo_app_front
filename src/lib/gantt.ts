@@ -6,6 +6,10 @@ export type GanttBar = {
   end: Date;
   startIndex: number;
   daySpan: number;
+  /** True when the task actually has 開始日 set (not inferred from 期限日 alone). */
+  hasStartDate: boolean;
+  /** True when the task actually has 期限日 set (not inferred from 開始日 alone). */
+  hasDueDate: boolean;
 };
 
 export type GanttGroup = {
@@ -51,6 +55,21 @@ export function addDays(d: Date, n: number): Date {
   return next;
 }
 
+/** Shift by whole calendar months, clamping day overflow (e.g. Jan 31 → Feb 28). */
+export function addCalendarMonths(d: Date, months: number): Date {
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const day = d.getDate();
+  const target = new Date(year, month + months, 1);
+  const lastDay = new Date(
+    target.getFullYear(),
+    target.getMonth() + 1,
+    0,
+  ).getDate();
+  target.setDate(Math.min(day, lastDay));
+  return target;
+}
+
 export function dayDiff(a: Date, b: Date): number {
   const ua = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
   const ub = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
@@ -58,17 +77,27 @@ export function dayDiff(a: Date, b: Date): number {
 }
 
 /** Inclusive bar from 開始日/期限日; omit when neither is set. */
-export function taskBarRange(task: Task): { start: Date; end: Date } | null {
+export function taskBarRange(task: Task): {
+  start: Date;
+  end: Date;
+  hasStartDate: boolean;
+  hasDueDate: boolean;
+} | null {
   const start = task.start_date ? parseDateOnly(task.start_date) : null;
   const end = task.due_date ? parseDateOnly(task.due_date) : null;
   if (!start && !end) return null;
   if (start && end) {
     return start.getTime() <= end.getTime()
-      ? { start, end }
-      : { start: end, end: start };
+      ? { start, end, hasStartDate: true, hasDueDate: true }
+      : { start: end, end: start, hasStartDate: true, hasDueDate: true };
   }
   const only = (start ?? end)!;
-  return { start: only, end: only };
+  return {
+    start: only,
+    end: only,
+    hasStartDate: !!start,
+    hasDueDate: !!end,
+  };
 }
 
 export function buildGanttModel(tasks: Task[]): {
@@ -78,7 +107,13 @@ export function buildGanttModel(tasks: Task[]): {
   days: Date[];
   groups: GanttGroup[];
 } | null {
-  const dated: { task: Task; start: Date; end: Date }[] = [];
+  const dated: {
+    task: Task;
+    start: Date;
+    end: Date;
+    hasStartDate: boolean;
+    hasDueDate: boolean;
+  }[] = [];
   for (const task of tasks) {
     const range = taskBarRange(task);
     if (!range) continue;
@@ -86,12 +121,37 @@ export function buildGanttModel(tasks: Task[]): {
   }
   if (!dated.length) return null;
 
-  let rangeStart = dated[0].start;
-  let rangeEnd = dated[0].end;
+  let earliestStart: Date | null = null;
+  let latestDue: Date | null = null;
   for (const item of dated) {
-    if (item.start.getTime() < rangeStart.getTime()) rangeStart = item.start;
-    if (item.end.getTime() > rangeEnd.getTime()) rangeEnd = item.end;
+    if (item.hasStartDate) {
+      if (!earliestStart || item.start.getTime() < earliestStart.getTime()) {
+        earliestStart = item.start;
+      }
+    }
+    if (item.hasDueDate) {
+      if (!latestDue || item.end.getTime() > latestDue.getTime()) {
+        latestDue = item.end;
+      }
+    }
   }
+
+  // Fall back to bar extents when only one side of dates exists among included tasks.
+  let contentStart = earliestStart;
+  let contentEnd = latestDue;
+  if (!contentStart || !contentEnd) {
+    for (const item of dated) {
+      if (!contentStart || item.start.getTime() < contentStart.getTime()) {
+        contentStart = item.start;
+      }
+      if (!contentEnd || item.end.getTime() > contentEnd.getTime()) {
+        contentEnd = item.end;
+      }
+    }
+  }
+
+  const rangeStart = addCalendarMonths(contentStart!, -1);
+  const rangeEnd = addCalendarMonths(contentEnd!, 1);
 
   const dayCount = dayDiff(rangeStart, rangeEnd) + 1;
   const days = Array.from({ length: dayCount }, (_, i) => addDays(rangeStart, i));
@@ -115,6 +175,8 @@ export function buildGanttModel(tasks: Task[]): {
       end: item.end,
       startIndex: dayDiff(rangeStart, item.start),
       daySpan: dayDiff(item.start, item.end) + 1,
+      hasStartDate: item.hasStartDate,
+      hasDueDate: item.hasDueDate,
     });
   }
 

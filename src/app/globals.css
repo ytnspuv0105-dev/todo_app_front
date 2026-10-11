@@ -680,8 +680,13 @@ a.task-number:hover {
 }
 
 .gantt-range {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.35rem;
   font-size: 0.9rem;
+}
+
+.gantt-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
 }
 
 .gantt-empty {
@@ -822,12 +827,50 @@ a.task-number:hover {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   box-shadow: 0 5px 12px rgba(31, 79, 59, 0.2);
   text-decoration: none;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
 }
 
 .gantt-bar:hover {
   filter: brightness(1.06);
-  transform: translateY(-1px);
+}
+
+.gantt-bar.is-saving {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.gantt-bar-handle {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: ew-resize;
+  z-index: 1;
+}
+
+.gantt-bar-handle-start {
+  left: 0;
+  border-radius: 7px 0 0 7px;
+}
+
+.gantt-bar-handle-end {
+  right: 0;
+  border-radius: 0 7px 7px 0;
+}
+
+.gantt-bar-handle:hover,
+.gantt-bar-handle:focus-visible {
+  background: rgba(255, 255, 255, 0.28);
+  outline: none;
+}
+
+.gantt-tick.is-month {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .sr-only {

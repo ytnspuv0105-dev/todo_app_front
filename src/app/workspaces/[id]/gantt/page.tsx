@@ -44,11 +44,20 @@ export default function WorkspaceGanttPage() {
       {error ? <p className="error">{error}</p> : null}
       {loading ? (
         <p className="muted">読み込み中…</p>
-      ) : (
+      ) : token ? (
         <section className="panel gantt-panel">
-          <AssigneeGantt workspaceId={workspaceId} tasks={tasks} />
+          <AssigneeGantt
+            workspaceId={workspaceId}
+            token={token}
+            tasks={tasks}
+            onTaskUpdated={(updated) => {
+              setTasks((prev) =>
+                prev.map((t) => (t.id === updated.id ? updated : t)),
+              );
+            }}
+          />
         </section>
-      )}
+      ) : null}
     </>
   );
 }
