@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Task,
@@ -33,6 +33,32 @@ export default function TaskDetailPage() {
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const saveNoticeRef = useRef<HTMLParagraphElement | null>(null);
+
+  useEffect(() => {
+    if (!saveNotice) return;
+    const el = saveNoticeRef.current;
+    if (!el) return;
+
+    // Scroll the element that actually scrolls (inner overflow container and/or window).
+    let node: HTMLElement | null = el.parentElement;
+    while (node && node !== document.body) {
+      const style = window.getComputedStyle(node);
+      const canScrollY =
+        (style.overflowY === "auto" ||
+          style.overflowY === "scroll" ||
+          style.overflow === "auto" ||
+          style.overflow === "scroll") &&
+        node.scrollHeight > node.clientHeight + 1;
+      if (canScrollY) {
+        node.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      node = node.parentElement;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    document.documentElement.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [saveNotice]);
 
   const [issueType, setIssueType] = useState("task");
   const [title, setTitle] = useState("");
@@ -189,7 +215,7 @@ export default function TaskDetailPage() {
         <Link href={`/workspaces/${workspaceId}`}>ダッシュボード</Link>
       </p>
       {saveNotice ? (
-        <p className="save-notice" role="status">
+        <p className="save-notice" role="status" ref={saveNoticeRef}>
           {saveNotice}
         </p>
       ) : null}
