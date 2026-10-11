@@ -194,8 +194,34 @@ export function joinInvite(token: string, inviteToken: string) {
   return request<Workspace>(`/invites/${inviteToken}/join`, { method: "POST" }, token);
 }
 
+export type TaskChangeItem = {
+  label: string;
+  before: string | null;
+  after: string | null;
+};
+
+export type TaskChangeHistory = {
+  id: number;
+  workspace_id: number;
+  task_id: number;
+  task_number: number;
+  task_title: string;
+  kind: string;
+  changes: TaskChangeItem[];
+  created_by_id: number;
+  created_at: string;
+};
+
 export function listTasks(token: string, workspaceId: number) {
   return request<Task[]>(`/workspaces/${workspaceId}/tasks`, {}, token);
+}
+
+export function listTaskHistory(token: string, workspaceId: number, limit = 20) {
+  return request<TaskChangeHistory[]>(
+    `/workspaces/${workspaceId}/task-history?limit=${limit}`,
+    {},
+    token,
+  );
 }
 
 export function getTask(token: string, workspaceId: number, taskId: number) {
