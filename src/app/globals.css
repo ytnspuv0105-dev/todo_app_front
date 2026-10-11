@@ -376,6 +376,82 @@ textarea { min-height: 110px; resize: vertical; }
   gap: 0.7rem;
 }
 
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.history-item {
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--line);
+  animation: fade 0.3s ease both;
+}
+
+.history-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.65rem;
+  margin-bottom: 0.45rem;
+}
+
+.history-item-title {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.history-item-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.history-item-time {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.history-create-label {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-2);
+}
+
+.history-changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.88rem;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.history-change-label {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.history-before {
+  color: var(--muted);
+}
+
+.history-after {
+  color: var(--accent-2);
+  font-weight: 500;
+}
+
 .task-card {
   list-style: none;
   padding: 0.9rem 1rem;

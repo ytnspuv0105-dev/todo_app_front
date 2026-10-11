@@ -2,17 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import TaskHistoryItem from "@/components/TaskHistoryItem";
 import TaskListItem from "@/components/TaskListItem";
 import {
   Task,
+  TaskChangeHistory,
   Workspace,
   createInvite,
   getWorkspace,
+  listTaskHistory,
   listTasks,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-const RECENT_LIMIT = 8;
+const HISTORY_LIMIT = 20;
 
 export default function WorkspaceDashboardPage() {
   const params = useParams();
@@ -20,6 +23,7 @@ export default function WorkspaceDashboardPage() {
   const { token, user } = useAuth();
   const [ws, setWs] = useState<Workspace | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [history, setHistory] = useState<TaskChangeHistory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,13 +33,15 @@ export default function WorkspaceDashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [w, t] = await Promise.all([
+        const [w, t, h] = await Promise.all([
           getWorkspace(token, workspaceId),
           listTasks(token, workspaceId),
+          listTaskHistory(token, workspaceId, HISTORY_LIMIT),
         ]);
         if (!cancelled) {
           setWs(w);
           setTasks(t);
+          setHistory(h);
         }
       } catch (err) {
         if (!cancelled) {
@@ -50,7 +56,6 @@ export default function WorkspaceDashboardPage() {
     };
   }, [token, workspaceId]);
 
-  const recent = useMemo(() => tasks.slice(0, RECENT_LIMIT), [tasks]);
   const mine = useMemo(
     () => tasks.filter((t) => user && t.assignee_id === user.id),
     [tasks, user],
@@ -81,7 +86,7 @@ export default function WorkspaceDashboardPage() {
             {ws?.name ?? "ダッシュボード"}
           </h2>
           <p className="lede" style={{ marginBottom: 0 }}>
-            最近更新された課題と、自分の担当課題を確認します。
+            最近の変更履歴と、自分の担当課題を確認します。
           </p>
         </div>
         {ws?.my_role === "admin" ? (
@@ -102,14 +107,18 @@ export default function WorkspaceDashboardPage() {
       <section className="panel stack" style={{ marginBottom: "1rem" }}>
         <div className="section-head">
           <h3 style={{ margin: 0, fontSize: "1.05rem" }}>最近のタスク</h3>
-          <span className="muted">{recent.length} 件</span>
+          <span className="muted">{history.length} 件</span>
         </div>
-        {recent.length === 0 ? (
-          <p className="empty">課題はまだありません</p>
+        {history.length === 0 ? (
+          <p className="empty">まだ変更履歴はありません</p>
         ) : (
-          <ul className="task-card-list">
-            {recent.map((task) => (
-              <TaskListItem key={task.id} task={task} workspaceId={workspaceId} />
+          <ul className="history-list">
+            {history.map((entry) => (
+              <TaskHistoryItem
+                key={entry.id}
+                entry={entry}
+                workspaceId={workspaceId}
+              />
             ))}
           </ul>
         )}
