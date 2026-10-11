@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Task } from "@/lib/api";
-import { ISSUE_TYPES, PRIORITIES, STATUSES, labelOf } from "@/lib/labels";
+import { taskFieldRows } from "@/lib/taskDisplay";
 
 type Props = {
   task: Task;
@@ -8,25 +8,31 @@ type Props = {
 };
 
 export default function TaskListItem({ task, workspaceId }: Props) {
+  const fields = taskFieldRows(task);
+  const title = fields.find((f) => f.key === "title")!;
+  const rest = fields.filter((f) => f.key !== "title");
+
   return (
-    <li className="list-item">
-      <div>
-        <Link className="title" href={`/workspaces/${workspaceId}/tasks/${task.id}`}>
-          #{task.id} {task.title}
+    <li className="task-card">
+      <div className="task-card-head">
+        <Link
+          className="task-card-title"
+          href={`/workspaces/${workspaceId}/tasks/${task.id}`}
+        >
+          {title.value}
         </Link>
-        <div className="meta">
-          <span className="badge">{labelOf(ISSUE_TYPES, task.issue_type)}</span>
-          <span className="badge ok">{labelOf(STATUSES, task.status)}</span>
-          <span className="badge warn">優先度 {labelOf(PRIORITIES, task.priority)}</span>
-          {task.assignee_name ? (
-            <span className="badge">担当: {task.assignee_name}</span>
-          ) : null}
-          {task.parent_id ? <span className="badge">親 #{task.parent_id}</span> : null}
-        </div>
       </div>
-      <Link className="btn btn-ghost" href={`/workspaces/${workspaceId}/tasks/${task.id}`}>
-        詳細
-      </Link>
+      <dl className="task-card-fields">
+        {rest.map((f) => (
+          <div
+            key={f.key}
+            className={`task-card-field${f.key === "description" ? " is-desc" : ""}`}
+          >
+            <dt>{f.label}</dt>
+            <dd title={f.title}>{f.value}</dd>
+          </div>
+        ))}
+      </dl>
     </li>
   );
 }

@@ -107,7 +107,7 @@ export default function WorkspaceDashboardPage() {
         {recent.length === 0 ? (
           <p className="empty">課題はまだありません</p>
         ) : (
-          <ul className="list">
+          <ul className="task-card-list">
             {recent.map((task) => (
               <TaskListItem key={task.id} task={task} workspaceId={workspaceId} />
             ))}
@@ -123,7 +123,7 @@ export default function WorkspaceDashboardPage() {
         {mine.length === 0 ? (
           <p className="empty">担当している課題はありません</p>
         ) : (
-          <ul className="list">
+          <ul className="task-card-list">
             {mine.map((task) => (
               <TaskListItem key={task.id} task={task} workspaceId={workspaceId} />
             ))}

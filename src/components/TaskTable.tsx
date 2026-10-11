@@ -1,35 +1,17 @@
 import Link from "next/link";
 import { Task } from "@/lib/api";
+import {
+  countLabel,
+  dash,
+  parentChildLabel,
+  truncateText,
+} from "@/lib/taskDisplay";
 import { ISSUE_TYPES, PRIORITIES, STATUSES, labelOf } from "@/lib/labels";
 
 type Props = {
   tasks: Task[];
   workspaceId: number;
 };
-
-const DESC_LIMIT = 40;
-
-function truncate(text: string, limit = DESC_LIMIT): string {
-  const t = text.replace(/\s+/g, " ").trim();
-  if (!t) return "—";
-  if (t.length <= limit) return t;
-  return `${t.slice(0, limit)}…`;
-}
-
-function dash(value: string | null | undefined): string {
-  return value && value.trim() ? value : "—";
-}
-
-function parentChildLabel(task: Task): string {
-  const parts: string[] = [];
-  if (task.parent_id) parts.push(`親 #${task.parent_id}`);
-  if (task.child_ids?.length) parts.push(`子 ${task.child_ids.length}`);
-  return parts.length ? parts.join(" · ") : "—";
-}
-
-function countLabel(n: number): string {
-  return n > 0 ? String(n) : "—";
-}
 
 export default function TaskTable({ tasks, workspaceId }: Props) {
   return (
@@ -62,7 +44,7 @@ export default function TaskTable({ tasks, workspaceId }: Props) {
                 </Link>
               </td>
               <td className="task-table-desc" title={task.description || undefined}>
-                {truncate(task.description)}
+                {truncateText(task.description)}
               </td>
               <td>{labelOf(STATUSES, task.status)}</td>
               <td>{labelOf(PRIORITIES, task.priority)}</td>
