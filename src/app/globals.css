@@ -437,6 +437,28 @@ textarea { min-height: 110px; resize: vertical; }
   color: var(--muted);
 }
 
+/* Task list filters */
+.task-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.75rem;
+  align-items: flex-end;
+}
+
+.task-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  min-width: min(100%, 140px);
+  flex: 1 1 140px;
+}
+
+.task-filter select {
+  min-width: 0;
+}
+
 /* Task list table */
 .task-table-wrap {
   width: 100%;
