@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import TaskListItem from "@/components/TaskListItem";
+import TaskTable from "@/components/TaskTable";
 import { Task, listTasks } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -64,11 +64,7 @@ export default function TaskListPage() {
         ) : tasks.length === 0 ? (
           <p className="empty">課題はまだありません</p>
         ) : (
-          <ul className="list">
-            {tasks.map((task) => (
-              <TaskListItem key={task.id} task={task} workspaceId={workspaceId} />
-            ))}
-          </ul>
+          <TaskTable tasks={tasks} workspaceId={workspaceId} />
         )}
       </section>
     </>
