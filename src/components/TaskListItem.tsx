@@ -15,9 +15,13 @@ export default function TaskListItem({ task, workspaceId }: Props) {
   return (
     <li className="task-card">
       <div className="task-card-head">
-        <span className="task-number" aria-label="課題番号">
+        <Link
+          className="task-number"
+          href={`/workspaces/${workspaceId}/tasks/${task.id}`}
+          aria-label={`課題 ${formatTaskNumber(task.number)} の詳細`}
+        >
           {formatTaskNumber(task.number)}
-        </span>
+        </Link>
         <Link
           className="task-card-title"
           href={`/workspaces/${workspaceId}/tasks/${task.id}`}

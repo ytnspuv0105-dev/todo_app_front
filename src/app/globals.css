@@ -396,9 +396,16 @@ textarea { min-height: 110px; resize: vertical; }
 .task-number {
   font-family: var(--font-display), serif;
   font-weight: 700;
-  color: var(--accent-2);
+  color: var(--accent);
   letter-spacing: 0.02em;
   white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+a.task-number:hover {
+  color: var(--accent-2);
+  text-decoration: underline;
 }
 
 .task-number-lg {

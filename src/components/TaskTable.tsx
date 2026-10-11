@@ -55,7 +55,13 @@ export default function TaskTable({
           {tasks.map((task) => (
             <tr key={task.id}>
               <td className="task-table-nowrap">
-                <span className="task-number">{formatTaskNumber(task.number)}</span>
+                <Link
+                  className="task-number"
+                  href={`/workspaces/${workspaceId}/tasks/${task.id}`}
+                  aria-label={`課題 ${formatTaskNumber(task.number)} の詳細`}
+                >
+                  {formatTaskNumber(task.number)}
+                </Link>
               </td>
               <td>{labelOf(ISSUE_TYPES, task.issue_type)}</td>
               <td className="task-table-title">
