@@ -50,6 +50,7 @@ export type Attachment = {
 
 export type Task = {
   id: number;
+  number: number;
   workspace_id: number;
   issue_type: string;
   title: string;
@@ -62,11 +63,14 @@ export type Task = {
   category: string | null;
   milestone: string | null;
   parent_id: number | null;
+  parent_number: number | null;
   created_by_id: number;
   created_at: string;
   updated_at: string;
   related_task_ids: number[];
+  related_task_numbers: number[];
   child_ids: number[];
+  child_numbers: number[];
   attachments: Attachment[];
   assignee_name: string | null;
 };
@@ -82,8 +86,8 @@ export type TaskInput = {
   start_date?: string | null;
   category?: string | null;
   milestone?: string | null;
-  parent_id?: number | null;
-  related_task_ids?: number[];
+  parent_number?: number | null;
+  related_task_numbers?: number[];
 };
 
 function getBaseUrl(): string {
