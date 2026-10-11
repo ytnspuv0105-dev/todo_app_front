@@ -420,6 +420,17 @@ a.task-number:hover {
   margin-bottom: 1rem;
 }
 
+.save-notice {
+  margin: 0 0 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: #dce9df;
+  color: #24553d;
+  font-size: 0.95rem;
+  font-weight: 500;
+  animation: rise 0.35s ease both;
+}
+
 .task-sort-btn {
   display: inline-flex;
   align-items: center;
