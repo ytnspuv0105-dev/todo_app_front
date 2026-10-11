@@ -40,24 +40,29 @@ export default function TaskDetailPage() {
     const el = saveNoticeRef.current;
     if (!el) return;
 
-    // Scroll the element that actually scrolls (inner overflow container and/or window).
+    // Scroll every container that actually moves (inner overflow + document).
+    // Avoid scrollIntoView here — it fights scroll-to-top when content sits above the notice.
+    const targets: Element[] = [];
     let node: HTMLElement | null = el.parentElement;
     while (node && node !== document.body) {
       const style = window.getComputedStyle(node);
+      const overflowY = style.overflowY;
+      const overflow = style.overflow;
       const canScrollY =
-        (style.overflowY === "auto" ||
-          style.overflowY === "scroll" ||
-          style.overflow === "auto" ||
-          style.overflow === "scroll") &&
+        (overflowY === "auto" ||
+          overflowY === "scroll" ||
+          overflow === "auto" ||
+          overflow === "scroll") &&
         node.scrollHeight > node.clientHeight + 1;
-      if (canScrollY) {
-        node.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      if (canScrollY) targets.push(node);
       node = node.parentElement;
     }
-    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
-    document.documentElement.scrollTo({ top: 0, left: 0, behavior: "smooth" });
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    const root = document.scrollingElement ?? document.documentElement;
+    if (!targets.includes(root)) targets.push(root);
+
+    for (const target of targets) {
+      target.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    }
   }, [saveNotice]);
 
   const [issueType, setIssueType] = useState("task");
