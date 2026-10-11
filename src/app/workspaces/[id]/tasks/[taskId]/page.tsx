@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Task,
@@ -33,6 +33,37 @@ export default function TaskDetailPage() {
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const saveNoticeRef = useRef<HTMLParagraphElement | null>(null);
+
+  useEffect(() => {
+    if (!saveNotice) return;
+    const el = saveNoticeRef.current;
+    if (!el) return;
+
+    // Scroll every container that actually moves (inner overflow + document).
+    // Avoid scrollIntoView here — it fights scroll-to-top when content sits above the notice.
+    const targets: Element[] = [];
+    let node: HTMLElement | null = el.parentElement;
+    while (node && node !== document.body) {
+      const style = window.getComputedStyle(node);
+      const overflowY = style.overflowY;
+      const overflow = style.overflow;
+      const canScrollY =
+        (overflowY === "auto" ||
+          overflowY === "scroll" ||
+          overflow === "auto" ||
+          overflow === "scroll") &&
+        node.scrollHeight > node.clientHeight + 1;
+      if (canScrollY) targets.push(node);
+      node = node.parentElement;
+    }
+    const root = document.scrollingElement ?? document.documentElement;
+    if (!targets.includes(root)) targets.push(root);
+
+    for (const target of targets) {
+      target.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    }
+  }, [saveNotice]);
 
   const [issueType, setIssueType] = useState("task");
   const [title, setTitle] = useState("");
@@ -189,7 +220,7 @@ export default function TaskDetailPage() {
         <Link href={`/workspaces/${workspaceId}`}>ダッシュボード</Link>
       </p>
       {saveNotice ? (
-        <p className="save-notice" role="status">
+        <p className="save-notice" role="status" ref={saveNoticeRef}>
           {saveNotice}
         </p>
       ) : null}
