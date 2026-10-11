@@ -17,6 +17,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
+import { formatTaskNumber } from "@/lib/taskDisplay";
 
 export default function TaskDetailPage() {
   const params = useParams();
@@ -42,8 +43,8 @@ export default function TaskDetailPage() {
   const [startDate, setStartDate] = useState("");
   const [category, setCategory] = useState("");
   const [milestone, setMilestone] = useState("");
-  const [parentId, setParentId] = useState("");
-  const [relatedIds, setRelatedIds] = useState("");
+  const [parentNumber, setParentNumber] = useState("");
+  const [relatedNumbers, setRelatedNumbers] = useState("");
 
   useEffect(() => {
     if (!token) return;
@@ -69,8 +70,8 @@ export default function TaskDetailPage() {
         setStartDate(t.start_date ?? "");
         setCategory(t.category ?? "");
         setMilestone(t.milestone ?? "");
-        setParentId(t.parent_id ? String(t.parent_id) : "");
-        setRelatedIds(t.related_task_ids.join(", "));
+        setParentNumber(t.parent_number != null ? String(t.parent_number) : "");
+        setRelatedNumbers((t.related_task_numbers ?? []).join(", "));
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "読み込みに失敗しました");
@@ -90,7 +91,7 @@ export default function TaskDetailPage() {
     setBusy(true);
     setError(null);
     try {
-      const related = relatedIds
+      const related = relatedNumbers
         .split(/[,\s]+/)
         .map((s) => s.trim())
         .filter(Boolean)
@@ -113,9 +114,9 @@ export default function TaskDetailPage() {
         clear_category: !category,
         milestone: milestone || null,
         clear_milestone: !milestone,
-        parent_id: parentId ? Number(parentId) : null,
-        clear_parent: !parentId,
-        related_task_ids: related,
+        parent_number: parentNumber ? Number(parentNumber) : null,
+        clear_parent: !parentNumber,
+        related_task_numbers: related,
       });
       setTask(updated);
     } catch (err) {
@@ -173,9 +174,14 @@ export default function TaskDetailPage() {
         {" · "}
         <Link href={`/workspaces/${workspaceId}`}>ダッシュボード</Link>
       </p>
-      <h2 className="hero-title" style={{ fontSize: "1.7rem" }}>
-        課題 #{taskId}
-      </h2>
+      <div className="task-detail-head">
+        <span className="task-number task-number-lg" aria-label="課題番号">
+          {task ? formatTaskNumber(task.number) : "…"}
+        </span>
+        <h2 className="hero-title" style={{ fontSize: "1.7rem", margin: 0 }}>
+          {title || "課題"}
+        </h2>
+      </div>
 
       <section className="panel">
         <form className="task-form" onSubmit={onSave}>
@@ -261,27 +267,32 @@ export default function TaskDetailPage() {
           <div className="grid-2">
             <label className="field">
               親課題
-              <select value={parentId} onChange={(e) => setParentId(e.target.value)}>
+              <select
+                value={parentNumber}
+                onChange={(e) => setParentNumber(e.target.value)}
+              >
                 <option value="">なし</option>
                 {siblings.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    #{s.id} {s.title}
+                  <option key={s.id} value={s.number}>
+                    {formatTaskNumber(s.number)} {s.title}
                   </option>
                 ))}
               </select>
             </label>
             <label className="field">
-              関連課題（IDをカンマ区切り）
+              関連課題（番号をカンマ区切り）
               <input
-                value={relatedIds}
-                onChange={(e) => setRelatedIds(e.target.value)}
+                value={relatedNumbers}
+                onChange={(e) => setRelatedNumbers(e.target.value)}
                 placeholder="例: 1, 3"
               />
             </label>
           </div>
 
-          {task?.child_ids?.length ? (
-            <p className="muted">子課題: {task.child_ids.map((id) => `#${id}`).join(", ")}</p>
+          {task?.child_numbers?.length ? (
+            <p className="muted">
+              子課題: {task.child_numbers.map((n) => formatTaskNumber(n)).join(", ")}
+            </p>
           ) : null}
 
           {error ? <p className="error">{error}</p> : null}

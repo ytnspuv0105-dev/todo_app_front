@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
+import { formatTaskNumber } from "@/lib/taskDisplay";
 
 export default function TaskCreatePage() {
   const params = useParams();
@@ -35,8 +36,8 @@ export default function TaskCreatePage() {
   const [startDate, setStartDate] = useState("");
   const [category, setCategory] = useState("");
   const [milestone, setMilestone] = useState("");
-  const [parentId, setParentId] = useState("");
-  const [relatedIds, setRelatedIds] = useState("");
+  const [parentNumber, setParentNumber] = useState("");
+  const [relatedNumbers, setRelatedNumbers] = useState("");
 
   useEffect(() => {
     if (!token || !workspaceId) return;
@@ -69,7 +70,7 @@ export default function TaskCreatePage() {
     setBusy(true);
     setError(null);
     try {
-      const related = relatedIds
+      const related = relatedNumbers
         .split(/[,\s]+/)
         .map((s) => s.trim())
         .filter(Boolean)
@@ -87,8 +88,8 @@ export default function TaskCreatePage() {
         start_date: startDate || null,
         category: category || null,
         milestone: milestone || null,
-        parent_id: parentId ? Number(parentId) : null,
-        related_task_ids: related,
+        parent_number: parentNumber ? Number(parentNumber) : null,
+        related_task_numbers: related,
       });
       router.push(`/workspaces/${workspaceId}/tasks/${task.id}`);
     } catch (err) {
@@ -204,20 +205,23 @@ export default function TaskCreatePage() {
           <div className="grid-2">
             <label className="field">
               親課題
-              <select value={parentId} onChange={(e) => setParentId(e.target.value)}>
+              <select
+                value={parentNumber}
+                onChange={(e) => setParentNumber(e.target.value)}
+              >
                 <option value="">なし</option>
                 {siblings.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    #{s.id} {s.title}
+                  <option key={s.id} value={s.number}>
+                    {formatTaskNumber(s.number)} {s.title}
                   </option>
                 ))}
               </select>
             </label>
             <label className="field">
-              関連課題（IDをカンマ区切り）
+              関連課題（番号をカンマ区切り）
               <input
-                value={relatedIds}
-                onChange={(e) => setRelatedIds(e.target.value)}
+                value={relatedNumbers}
+                onChange={(e) => setRelatedNumbers(e.target.value)}
                 placeholder="例: 1, 3"
               />
             </label>

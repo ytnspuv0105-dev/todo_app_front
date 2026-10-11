@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Task } from "@/lib/api";
-import { taskFieldRows } from "@/lib/taskDisplay";
+import { formatTaskNumber, taskFieldRows } from "@/lib/taskDisplay";
 
 type Props = {
   task: Task;
@@ -10,11 +10,14 @@ type Props = {
 export default function TaskListItem({ task, workspaceId }: Props) {
   const fields = taskFieldRows(task);
   const title = fields.find((f) => f.key === "title")!;
-  const rest = fields.filter((f) => f.key !== "title");
+  const rest = fields.filter((f) => f.key !== "title" && f.key !== "number");
 
   return (
     <li className="task-card">
       <div className="task-card-head">
+        <span className="task-number" aria-label="課題番号">
+          {formatTaskNumber(task.number)}
+        </span>
         <Link
           className="task-card-title"
           href={`/workspaces/${workspaceId}/tasks/${task.id}`}

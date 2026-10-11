@@ -3,6 +3,10 @@ import { ISSUE_TYPES, PRIORITIES, STATUSES, labelOf } from "@/lib/labels";
 
 const DESC_LIMIT = 40;
 
+export function formatTaskNumber(n: number): string {
+  return `#${n}`;
+}
+
 export function truncateText(text: string, limit = DESC_LIMIT): string {
   const t = text.replace(/\s+/g, " ").trim();
   if (!t) return "—";
@@ -16,13 +20,26 @@ export function dash(value: string | null | undefined): string {
 
 export function parentChildLabel(task: Task): string {
   const parts: string[] = [];
-  if (task.parent_id) parts.push(`親 #${task.parent_id}`);
-  if (task.child_ids?.length) parts.push(`子 ${task.child_ids.length}`);
+  if (task.parent_number != null) parts.push(`親 ${formatTaskNumber(task.parent_number)}`);
+  if (task.child_numbers?.length) {
+    parts.push(`子 ${task.child_numbers.map(formatTaskNumber).join(", ")}`);
+  }
   return parts.length ? parts.join(" · ") : "—";
 }
 
 export function countLabel(n: number): string {
   return n > 0 ? String(n) : "—";
+}
+
+export function formatUpdatedAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${day} ${hh}:${mm}`;
 }
 
 export type TaskFieldRow = {
@@ -35,8 +52,9 @@ export type TaskFieldRow = {
 /** Current stored field values for list/dashboard display (not a history feed). */
 export function taskFieldRows(task: Task): TaskFieldRow[] {
   return [
+    { key: "number", label: "番号", value: formatTaskNumber(task.number) },
     { key: "issue_type", label: "種別", value: labelOf(ISSUE_TYPES, task.issue_type) },
-    { key: "title", label: "件名", value: `#${task.id} ${task.title}` },
+    { key: "title", label: "件名", value: task.title },
     {
       key: "description",
       label: "詳細",
@@ -54,7 +72,10 @@ export function taskFieldRows(task: Task): TaskFieldRow[] {
     {
       key: "related",
       label: "関連",
-      value: countLabel(task.related_task_ids?.length ?? 0),
+      value:
+        task.related_task_numbers?.length
+          ? task.related_task_numbers.map(formatTaskNumber).join(", ")
+          : "—",
     },
     {
       key: "attachments",

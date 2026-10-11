@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import TaskTable from "@/components/TaskTable";
+import TaskTable, { NumberSort } from "@/components/TaskTable";
 import { Task, listTasks } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, STATUSES, labelOf } from "@/lib/labels";
@@ -21,6 +21,7 @@ export default function TaskListPage() {
   const [issueType, setIssueType] = useState("");
   const [status, setStatus] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [numberSort, setNumberSort] = useState<NumberSort>(null);
 
   useEffect(() => {
     if (!token || !workspaceId) return;
@@ -67,7 +68,7 @@ export default function TaskListPage() {
         continue;
       }
       if (!map.has(t.assignee_id)) {
-        map.set(t.assignee_id, t.assignee_name ?? `ユーザー #${t.assignee_id}`);
+        map.set(t.assignee_id, t.assignee_name ?? `ユーザー ${t.assignee_id}`);
       }
     }
     const named = [...map.entries()]
@@ -79,7 +80,7 @@ export default function TaskListPage() {
   }, [tasks]);
 
   const filtered = useMemo(() => {
-    return tasks.filter((t) => {
+    const rows = tasks.filter((t) => {
       if (issueType && t.issue_type !== issueType) return false;
       if (status && t.status !== status) return false;
       if (assignee === UNASSIGNED) {
@@ -89,7 +90,21 @@ export default function TaskListPage() {
       }
       return true;
     });
-  }, [tasks, issueType, status, assignee]);
+
+    const sorted = [...rows];
+    if (numberSort === "asc") {
+      sorted.sort((a, b) => a.number - b.number);
+    } else if (numberSort === "desc") {
+      sorted.sort((a, b) => b.number - a.number);
+    } else {
+      // Default: 更新日 descending (API already returns this; keep stable client-side)
+      sorted.sort(
+        (a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+      );
+    }
+    return sorted;
+  }, [tasks, issueType, status, assignee, numberSort]);
 
   const filtersActive = Boolean(issueType || status || assignee);
 
@@ -97,6 +112,13 @@ export default function TaskListPage() {
     setIssueType("");
     setStatus("");
     setAssignee("");
+  }
+
+  function toggleNumberSort() {
+    setNumberSort((prev) => {
+      if (prev === null || prev === "desc") return "asc";
+      return "desc";
+    });
   }
 
   return (
@@ -181,7 +203,12 @@ export default function TaskListPage() {
         ) : filtered.length === 0 ? (
           <p className="empty">条件に一致する課題はありません</p>
         ) : (
-          <TaskTable tasks={filtered} workspaceId={workspaceId} />
+          <TaskTable
+            tasks={filtered}
+            workspaceId={workspaceId}
+            numberSort={numberSort}
+            onToggleNumberSort={toggleNumberSort}
+          />
         )}
       </section>
     </>
