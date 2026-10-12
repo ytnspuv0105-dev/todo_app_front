@@ -359,6 +359,56 @@ textarea { min-height: 110px; resize: vertical; }
   font-size: 0.9rem;
 }
 
+button.ws-nav-link {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+}
+
+button.ws-nav-link:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ws-nav-invite {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.ws-nav-invite-result {
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--line);
+}
+
+.ws-nav-invite-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.ws-nav-invite .invite-meta > div {
+  grid-template-columns: 1fr;
+  gap: 0.1rem;
+}
+
+.ws-nav-invite-url {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+}
+
+.gate-bar {
+  padding: 1.25rem var(--ws-page-pad) 0;
+}
+
+.gate-bar .topbar {
+  margin-bottom: 0;
+}
+
 .ws-main {
   min-width: 0;
   animation: rise 0.5s ease both;

@@ -18,7 +18,7 @@ const display = Shippori_Mincho({
 });
 
 export const metadata: Metadata = {
-  title: "ワークスペース課題",
+  title: "Todo管理",
   description: "チームで課題を管理するアプリ",
 };
 

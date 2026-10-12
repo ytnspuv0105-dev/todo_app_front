@@ -9,7 +9,7 @@ export default function AppHeader() {
   return (
     <header className="topbar">
       <h1 className="brand">
-        <Link href="/workspaces">ワークスペース課題</Link>
+        <Link href="/">Todo管理</Link>
       </h1>
       {user ? (
         <div className="userchip">
