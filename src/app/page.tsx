@@ -3,15 +3,31 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { resolveHomePath } from "@/lib/landing";
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
-    router.replace(user ? "/workspaces" : "/login");
-  }, [user, loading, router]);
+    if (!user || !token) {
+      router.replace("/login");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const dest = await resolveHomePath(token);
+        if (!cancelled) router.replace(dest);
+      } catch {
+        if (!cancelled) router.replace("/account");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, token, loading, router]);
 
   return (
     <div className="shell">

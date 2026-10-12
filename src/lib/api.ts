@@ -160,6 +160,21 @@ export function me(token: string) {
   return request<User>("/auth/me", {}, token);
 }
 
+export type ProfileUpdate = {
+  display_name?: string;
+  email?: string;
+  current_password?: string;
+  new_password?: string;
+};
+
+export function updateProfile(token: string, data: ProfileUpdate) {
+  return request<User>(
+    "/auth/me",
+    { method: "PATCH", body: JSON.stringify(data) },
+    token,
+  );
+}
+
 export function listWorkspaces(token: string) {
   return request<Workspace[]>("/workspaces", {}, token);
 }

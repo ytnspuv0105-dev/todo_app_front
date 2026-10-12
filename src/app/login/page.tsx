@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
+import { resolveHomePath, safeNextPath } from "@/lib/landing";
 
 export default function LoginPage() {
   return (
@@ -14,18 +16,32 @@ export default function LoginPage() {
 }
 
 function LoginInner() {
-  const { login, user, loading } = useAuth();
+  const { login, user, token, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/workspaces";
+  const next = safeNextPath(params.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace(next);
-  }, [loading, user, router, next]);
+    if (loading || !user || !token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const dest = next ?? (await resolveHomePath(token));
+        if (!cancelled) router.replace(dest);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "移動に失敗しました");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user, token, router, next]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -33,7 +49,6 @@ function LoginInner() {
     setBusy(true);
     try {
       await login(email, password);
-      router.replace(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "ログインに失敗しました");
     } finally {
@@ -42,8 +57,12 @@ function LoginInner() {
   }
 
   return (
+    <>
+    <div className="gate-bar">
+      <AppHeader />
+    </div>
     <main className="center-auth">
-      <h1 className="hero-title">ワークスペース課題</h1>
+      <h1 className="hero-title">ログイン</h1>
       <p className="lede">メールアドレスでログインしてください。</p>
       <section className="panel stack">
         <form className="stack" onSubmit={onSubmit}>
@@ -78,5 +97,6 @@ function LoginInner() {
         </p>
       </section>
     </main>
+    </>
   );
 }

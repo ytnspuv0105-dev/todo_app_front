@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import AppHeader from "@/components/AppHeader";
 import { InviteInfo, getInviteInfo, joinInvite } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { rememberWorkspace } from "@/lib/landing";
 import { inviteExpiryLabel, workspaceRoleLabel } from "@/lib/labels";
 
 export default function InvitePage() {
@@ -42,6 +44,7 @@ export default function InvitePage() {
     setError(null);
     try {
       const ws = await joinInvite(token, inviteToken);
+      rememberWorkspace(ws.id);
       router.push(`/workspaces/${ws.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "参加に失敗しました");
@@ -51,6 +54,10 @@ export default function InvitePage() {
   }
 
   return (
+    <>
+    <div className="gate-bar">
+      <AppHeader />
+    </div>
     <main className="center-auth">
       <h1 className="hero-title">招待</h1>
       <p className="lede">ワークスペースへの招待リンクです。</p>
@@ -106,5 +113,6 @@ export default function InvitePage() {
         ) : null}
       </section>
     </main>
+    </>
   );
 }
