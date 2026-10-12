@@ -19,7 +19,7 @@ type NavItem = {
 };
 
 export default function WorkspaceShell({ workspaceId, children }: Props) {
-  const { token } = useAuth();
+  const { token, user, logout } = useAuth();
   const pathname = usePathname();
   const [ws, setWs] = useState<Workspace | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -136,7 +136,20 @@ export default function WorkspaceShell({ workspaceId, children }: Props) {
             tabIndex={menuOpen ? 0 : -1}
             onClick={() => setMenuOpen(false)}
           />
-          <div className="ws-drawer-panel">{nav}</div>
+          <div className="ws-drawer-panel">
+            {user ? (
+              <div className="ws-drawer-user">
+                <span className="ws-drawer-user-name">
+                  {user.display_name}
+                  {user.role === "admin" ? "（管理者）" : ""}
+                </span>
+                <button type="button" className="btn btn-ghost" onClick={logout}>
+                  ログアウト
+                </button>
+              </div>
+            ) : null}
+            {nav}
+          </div>
         </div>
 
         <main className="ws-main">{children}</main>

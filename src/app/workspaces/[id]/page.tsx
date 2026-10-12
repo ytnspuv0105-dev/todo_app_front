@@ -185,7 +185,7 @@ export default function WorkspaceDashboardPage() {
       </section>
 
       <section className="panel stack">
-        <div className="section-head">
+        <div className="section-head section-head-mine">
           <h3 style={{ margin: 0, fontSize: "1.05rem" }}>自分の担当</h3>
           <div className="section-head-actions">
             <Link className="btn btn-ghost" href={mineListHref}>

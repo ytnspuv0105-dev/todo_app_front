@@ -24,11 +24,11 @@ function isEmptyBefore(before: string | null | undefined): boolean {
 
 function FieldDiff({ change }: { change: TaskChangeItem }) {
   return (
-    <li>
+    <li className="history-diff">
       <span className="history-change-label">{change.label}</span>
-      {": "}
+      <span className="history-diff-sep">: </span>
       <span className="history-before">{change.before ?? "（空）"}</span>
-      {" → "}
+      <span className="history-diff-arrow"> → </span>
       <span className="history-after">{change.after ?? "（空）"}</span>
     </li>
   );
