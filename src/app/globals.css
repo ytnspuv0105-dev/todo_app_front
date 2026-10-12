@@ -1140,6 +1140,142 @@ a.task-number:hover {
     overflow-y: auto;
   }
   .ws-drawer.is-open .ws-drawer-panel { transform: translateX(0); }
+
+  .ws-drawer-user {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .ws-drawer-user-name {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .ws-app .topbar {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 0;
+    min-width: 0;
+  }
+
+  .ws-app .brand {
+    font-size: 1.15rem;
+  }
+
+  .ws-app .userchip {
+    display: none;
+  }
+
+  .ws-top {
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .task-table.is-frozen-cols th,
+  .task-table.is-frozen-cols td {
+    padding: 0.4rem 0.35rem;
+  }
+
+  .task-table.is-frozen-cols .task-col-number,
+  .task-table.is-frozen-cols .task-col-title {
+    position: sticky;
+    z-index: 2;
+    background: #f7fbf8;
+  }
+
+  .task-table.is-frozen-cols th.task-col-number,
+  .task-table.is-frozen-cols th.task-col-title {
+    z-index: 3;
+    background: #eef5f0;
+  }
+
+  .task-table.is-frozen-cols .task-col-number {
+    left: 0;
+    width: 3.4rem;
+    min-width: 3.4rem;
+    max-width: 3.4rem;
+  }
+
+  .task-table.is-frozen-cols .task-col-title {
+    left: 3.4rem;
+    width: 6.5rem;
+    min-width: 6.5rem;
+    max-width: 6.5rem;
+    box-shadow: 6px 0 8px rgba(26, 38, 32, 0.06);
+  }
+
+  .task-table.is-frozen-cols .task-table-title {
+    white-space: nowrap;
+  }
+
+  .gantt-grid {
+    grid-template-columns: 7.5rem max-content;
+  }
+
+  .gantt-corner,
+  .gantt-group-label,
+  .gantt-task-label {
+    width: 7.5rem;
+    max-width: 7.5rem;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    overflow: hidden;
+  }
+
+  .gantt-bar-handle {
+    width: 28px;
+  }
+
+  .detail-timeline {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+  }
+
+  .detail-timeline .history-diff {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.12rem;
+  }
+
+  .detail-timeline .history-diff-sep,
+  .detail-timeline .history-diff-arrow {
+    display: none;
+  }
+
+  .detail-timeline .history-before::before {
+    content: "変更前 ";
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .detail-timeline .history-after::before {
+    content: "変更後 ";
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  .section-head-mine {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-head-mine .section-head-actions {
+    justify-content: flex-start;
+  }
+
+  .task-card-fields {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
