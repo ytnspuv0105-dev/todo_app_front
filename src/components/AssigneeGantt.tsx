@@ -29,6 +29,7 @@ type Props = {
 };
 
 const DAY_PX = 40;
+const SAVE_ERROR = "日付の保存に失敗しました";
 
 type DragSession = {
   taskId: number;
@@ -39,6 +40,9 @@ type DragSession = {
   /** Working dates during the drag (always both set). */
   start: string;
   due: string;
+  /** Committed dates before the drag (for rollback on save failure). */
+  originalStart: string | null;
+  originalDue: string | null;
 };
 
 type DateDraft = {
@@ -57,6 +61,17 @@ function dayIndexFromClientX(
 ) {
   const rect = track.getBoundingClientRect();
   return clamp(Math.floor((clientX - rect.left) / DAY_PX), 0, dayCount - 1);
+}
+
+function TodayLine({ index }: { index: number }) {
+  if (index < 0) return null;
+  return (
+    <div
+      className="gantt-today-line"
+      style={{ left: index * DAY_PX + DAY_PX / 2 }}
+      aria-hidden
+    />
+  );
 }
 
 export default function AssigneeGantt({
@@ -106,6 +121,20 @@ export default function AssigneeGantt({
     didInitialScrollRef.current = true;
   }, [model, today]);
 
+  function clearDraft(taskId: number) {
+    setDrafts((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
+  }
+
+  function restoreOriginalDates(session: DragSession) {
+    // Drop the drag draft so the bar snaps back to committed start/due
+    // (session.originalStart / originalDue are the pre-drag values).
+    clearDraft(session.taskId);
+  }
+
   function previewDrag(clientX: number) {
     const drag = dragRef.current;
     if (!drag) return;
@@ -136,7 +165,7 @@ export default function AssigneeGantt({
     track: HTMLElement,
     rangeStart: Date,
     dayCount: number,
-    e: ReactPointerEvent,
+    e: ReactPointerEvent<HTMLButtonElement>,
   ) {
     e.preventDefault();
     e.stopPropagation();
@@ -145,6 +174,7 @@ export default function AssigneeGantt({
 
     const start = task.start_date ?? task.due_date!;
     const due = task.due_date ?? task.start_date!;
+    const handle = e.currentTarget;
 
     dragRef.current = {
       taskId: task.id,
@@ -154,6 +184,8 @@ export default function AssigneeGantt({
       dayCount,
       start,
       due,
+      originalStart: task.start_date,
+      originalDue: task.due_date,
     };
 
     setDrafts((prev) => ({
@@ -161,16 +193,35 @@ export default function AssigneeGantt({
       [task.id]: { start_date: start, due_date: due },
     }));
 
+    try {
+      handle.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture may be unavailable; window listeners still work */
+    }
+
     const onMove = (ev: PointerEvent) => {
+      if (dragRef.current?.taskId !== task.id) return;
       movedRef.current = true;
       suppressClickRef.current = true;
+      ev.preventDefault();
       previewDrag(ev.clientX);
     };
 
     const finish = async (ev: PointerEvent) => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", finish);
+      handle.removeEventListener("pointercancel", finish);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", finish);
+
+      try {
+        if (handle.hasPointerCapture(ev.pointerId)) {
+          handle.releasePointerCapture(ev.pointerId);
+        }
+      } catch {
+        /* ignore */
+      }
 
       previewDrag(ev.clientX);
       const session = dragRef.current;
@@ -178,7 +229,10 @@ export default function AssigneeGantt({
       if (!session) return;
 
       const original = tasks.find((t) => t.id === session.taskId);
-      if (!original) return;
+      if (!original) {
+        restoreOriginalDates(session);
+        return;
+      }
 
       const { start: finalStart, due: finalDue, edge: dragEdge } = session;
 
@@ -187,11 +241,7 @@ export default function AssigneeGantt({
         !movedRef.current ||
         (original.start_date === finalStart && original.due_date === finalDue)
       ) {
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[session.taskId];
-          return next;
-        });
+        restoreOriginalDates(session);
         window.setTimeout(() => {
           suppressClickRef.current = false;
         }, 0);
@@ -225,18 +275,10 @@ export default function AssigneeGantt({
           payload,
         );
         onTaskUpdated(updated);
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[session.taskId];
-          return next;
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "保存に失敗しました");
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[session.taskId];
-          return next;
-        });
+        clearDraft(session.taskId);
+      } catch {
+        setError(SAVE_ERROR);
+        restoreOriginalDates(session);
       } finally {
         setSavingId(null);
         window.setTimeout(() => {
@@ -245,7 +287,11 @@ export default function AssigneeGantt({
       }
     };
 
-    window.addEventListener("pointermove", onMove);
+    // Capture on the handle for touch; also listen on window as a fallback.
+    handle.addEventListener("pointermove", onMove, { passive: false });
+    handle.addEventListener("pointerup", finish);
+    handle.addEventListener("pointercancel", finish);
+    window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", finish);
     window.addEventListener("pointercancel", finish);
     previewDrag(e.clientX);
@@ -261,6 +307,7 @@ export default function AssigneeGantt({
 
   const { dayCount, days, groups, rangeStart, rangeEnd } = model;
   const timelineWidth = dayCount * DAY_PX;
+  const todayIndex = dayDiff(rangeStart, today);
 
   return (
     <div className="gantt">
@@ -270,7 +317,11 @@ export default function AssigneeGantt({
       <p className="gantt-hint muted">
         バーの端をドラッグすると開始日・期限日を変更できます。
       </p>
-      {error ? <p className="error">{error}</p> : null}
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
       <div
         className="gantt-scroll"
         role="region"
@@ -304,6 +355,7 @@ export default function AssigneeGantt({
                 </div>
               );
             })}
+            <TodayLine index={todayIndex} />
           </div>
 
           {groups.map((group) => (
@@ -313,8 +365,11 @@ export default function AssigneeGantt({
                 className="gantt-group-span"
                 style={{ width: timelineWidth }}
                 aria-hidden
-              />
+              >
+                <TodayLine index={todayIndex} />
+              </div>
 
+              {/* One task per row — overlapping bars never share a track. */}
               {group.bars.map((bar) => {
                 const left = bar.startIndex * DAY_PX + 2;
                 const width = Math.max(bar.daySpan * DAY_PX - 4, DAY_PX - 4);
@@ -336,6 +391,7 @@ export default function AssigneeGantt({
                     </Link>
                     <div className="gantt-track" style={{ width: timelineWidth }}>
                       <div className="gantt-day-lines" aria-hidden />
+                      <TodayLine index={todayIndex} />
                       <div
                         className={`gantt-bar${busy ? " is-saving" : ""}`}
                         style={{ left, width }}
@@ -364,14 +420,14 @@ export default function AssigneeGantt({
                           aria-label={`${label}の開始日を変更`}
                           disabled={busy}
                           onPointerDown={(ev) => {
-                            const track = ev.currentTarget.closest(
+                            const trackEl = ev.currentTarget.closest(
                               ".gantt-track",
                             ) as HTMLElement | null;
-                            if (!track) return;
+                            if (!trackEl) return;
                             beginDrag(
                               "start",
                               bar.task,
-                              track,
+                              trackEl,
                               rangeStart,
                               dayCount,
                               ev,
@@ -384,14 +440,14 @@ export default function AssigneeGantt({
                           aria-label={`${label}の期限日を変更`}
                           disabled={busy}
                           onPointerDown={(ev) => {
-                            const track = ev.currentTarget.closest(
+                            const trackEl = ev.currentTarget.closest(
                               ".gantt-track",
                             ) as HTMLElement | null;
-                            if (!track) return;
+                            if (!trackEl) return;
                             beginDrag(
                               "end",
                               bar.task,
-                              track,
+                              trackEl,
                               rangeStart,
                               dayCount,
                               ev,
