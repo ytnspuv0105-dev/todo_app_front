@@ -31,6 +31,8 @@ export default function TaskHistoryItem({ entry, workspaceId }: Props) {
       </div>
       {entry.kind === "create" ? (
         <p className="history-create-label">作成</p>
+      ) : entry.kind === "comment" ? (
+        <p className="history-comment-label">コメント</p>
       ) : (
         <ul className="history-changes">
           {entry.changes.map((c, i) => (

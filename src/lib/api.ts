@@ -216,6 +216,15 @@ export type TaskChangeHistory = {
   created_at: string;
 };
 
+export type TaskComment = {
+  id: number;
+  task_id: number;
+  author_id: number;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+};
+
 export function listTasks(token: string, workspaceId: number) {
   return request<Task[]>(`/workspaces/${workspaceId}/tasks`, {}, token);
 }
@@ -257,6 +266,27 @@ export function deleteTask(token: string, workspaceId: number, taskId: number) {
   return request<void>(
     `/workspaces/${workspaceId}/tasks/${taskId}`,
     { method: "DELETE" },
+    token,
+  );
+}
+
+export function listComments(token: string, workspaceId: number, taskId: number) {
+  return request<TaskComment[]>(
+    `/workspaces/${workspaceId}/tasks/${taskId}/comments`,
+    {},
+    token,
+  );
+}
+
+export function createComment(
+  token: string,
+  workspaceId: number,
+  taskId: number,
+  body: string,
+) {
+  return request<TaskComment>(
+    `/workspaces/${workspaceId}/tasks/${taskId}/comments`,
+    { method: "POST", body: JSON.stringify({ body }) },
     token,
   );
 }

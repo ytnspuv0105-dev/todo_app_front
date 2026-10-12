@@ -5,11 +5,14 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Task,
+  TaskComment,
   WorkspaceMember,
+  createComment,
   downloadAttachment,
   deleteAttachment,
   deleteTask,
   getTask,
+  listComments,
   listMembers,
   listTasks,
   updateTask,
@@ -17,7 +20,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
-import { formatTaskNumber } from "@/lib/taskDisplay";
+import { formatTaskNumber, formatUpdatedAt } from "@/lib/taskDisplay";
 
 export default function TaskDetailPage() {
   const params = useParams();
@@ -29,6 +32,9 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [siblings, setSiblings] = useState<Task[]>([]);
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [commentBody, setCommentBody] = useState("");
+  const [commentBusy, setCommentBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -94,15 +100,17 @@ export default function TaskDetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [t, m, all] = await Promise.all([
+        const [t, m, all, c] = await Promise.all([
           getTask(token, workspaceId, taskId),
           listMembers(token, workspaceId),
           listTasks(token, workspaceId),
+          listComments(token, workspaceId, taskId),
         ]);
         if (cancelled) return;
         setTask(t);
         setMembers(m);
         setSiblings(all.filter((x) => x.id !== taskId));
+        setComments(c);
         setIssueType(t.issue_type);
         setTitle(t.title);
         setDescription(t.description);
@@ -205,6 +213,27 @@ export default function TaskDetailPage() {
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "添付の削除に失敗しました");
+    }
+  }
+
+  async function onPostComment(e: FormEvent) {
+    e.preventDefault();
+    if (!token || !commentBody.trim()) return;
+    setCommentBusy(true);
+    setError(null);
+    try {
+      const created = await createComment(
+        token,
+        workspaceId,
+        taskId,
+        commentBody.trim(),
+      );
+      setComments((prev) => [...prev, created]);
+      setCommentBody("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "コメントの投稿に失敗しました");
+    } finally {
+      setCommentBusy(false);
     }
   }
 
@@ -389,6 +418,53 @@ export default function TaskDetailPage() {
             </button>
             <button className="btn btn-danger" type="button" onClick={onDelete}>
               削除
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="panel stack" style={{ marginTop: "1rem" }}>
+        <div className="section-head">
+          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>コメント</h3>
+          <span className="muted">{comments.length} 件</span>
+        </div>
+        {comments.length === 0 ? (
+          <p className="empty">まだコメントはありません</p>
+        ) : (
+          <ul className="comment-thread">
+            {comments.map((c) => (
+              <li key={c.id} className="comment-item">
+                <div className="comment-item-head">
+                  <span className="comment-author">
+                    {c.author_name?.trim() || "不明なユーザー"}
+                  </span>
+                  <span className="comment-time muted">
+                    {formatUpdatedAt(c.created_at)}
+                  </span>
+                </div>
+                <p className="comment-body">{c.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form className="stack comment-form" onSubmit={onPostComment}>
+          <label className="field">
+            コメントを追加
+            <textarea
+              value={commentBody}
+              onChange={(e) => setCommentBody(e.target.value)}
+              maxLength={5000}
+              required
+              placeholder="メンバーへの連絡やメモを書けます"
+            />
+          </label>
+          <div className="row">
+            <button
+              className="btn btn-primary"
+              type="submit"
+              disabled={commentBusy || !commentBody.trim()}
+            >
+              投稿
             </button>
           </div>
         </form>
