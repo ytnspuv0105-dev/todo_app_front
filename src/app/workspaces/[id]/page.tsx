@@ -14,7 +14,7 @@ import {
   listTasks,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { isDueSoon, sortByDueDateAsc } from "@/lib/dueSoon";
+import { isClosedStatus, isDueSoon, sortByDueDateAsc } from "@/lib/dueSoon";
 import { formatTaskNumber } from "@/lib/taskDisplay";
 
 const HISTORY_LIMIT = 20;
@@ -58,7 +58,10 @@ export default function WorkspaceDashboardPage() {
   }, [token, workspaceId]);
 
   const mine = useMemo(
-    () => tasks.filter((t) => user && t.assignee_id === user.id),
+    () =>
+      tasks.filter(
+        (t) => user && t.assignee_id === user.id && !isClosedStatus(t.status),
+      ),
     [tasks, user],
   );
 

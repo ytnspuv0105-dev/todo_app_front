@@ -23,6 +23,7 @@ import {
 import TaskDetailTimeline from "@/components/TaskDetailTimeline";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
+import { rememberedListHref } from "@/lib/listFilters";
 import { formatTaskNumber } from "@/lib/taskDisplay";
 
 export default function TaskDetailPage() {
@@ -40,6 +41,7 @@ export default function TaskDetailPage() {
   const [commentBody, setCommentBody] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingBody, setEditingBody] = useState("");
+  const [listHref, setListHref] = useState(`/workspaces/${workspaceId}/tasks`);
   const [editBusy, setEditBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
@@ -100,6 +102,10 @@ export default function TaskDetailPage() {
   useEffect(() => {
     setSaveNotice(null);
   }, [workspaceId, taskId]);
+
+  useEffect(() => {
+    setListHref(rememberedListHref(workspaceId));
+  }, [workspaceId]);
 
   useEffect(() => {
     if (!token) return;
@@ -239,6 +245,7 @@ export default function TaskDetailPage() {
       setTask((prev) =>
         prev ? { ...prev, attachments: [...prev.attachments, att] } : prev,
       );
+      await refreshTimeline();
     } catch (err) {
       setError(err instanceof Error ? err.message : "アップロードに失敗しました");
     }
@@ -253,6 +260,7 @@ export default function TaskDetailPage() {
           ? { ...prev, attachments: prev.attachments.filter((a) => a.id !== id) }
           : prev,
       );
+      await refreshTimeline();
     } catch (err) {
       setError(err instanceof Error ? err.message : "添付の削除に失敗しました");
     }
@@ -288,7 +296,7 @@ export default function TaskDetailPage() {
   return (
     <>
       <p className="muted">
-        <Link href={`/workspaces/${workspaceId}/tasks`}>← 課題一覧</Link>
+        <Link href={listHref}>← 課題一覧</Link>
         {" · "}
         <Link href={`/workspaces/${workspaceId}`}>ダッシュボード</Link>
       </p>

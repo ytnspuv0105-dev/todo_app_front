@@ -1,47 +1,67 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import TaskTable, { NumberSort } from "@/components/TaskTable";
 import { Task, listTasks } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, STATUSES, labelOf } from "@/lib/labels";
+import {
+  buildListSearch,
+  listFiltersFromSearch,
+  rememberListFilters,
+} from "@/lib/listFilters";
 
 const UNASSIGNED = "__unassigned__";
 
 function TaskListContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const workspaceId = Number(params.id);
   const { token } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [titleQuery, setTitleQuery] = useState(
-    () => searchParams.get("q") ?? "",
-  );
-  const [issueType, setIssueType] = useState(
-    () => searchParams.get("issue_type") ?? "",
-  );
-  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
-  const [assignee, setAssignee] = useState(
-    () => searchParams.get("assignee") ?? "",
-  );
+  const initialFilters = listFiltersFromSearch(searchParams.toString());
+  const [titleQuery, setTitleQuery] = useState(initialFilters.q);
+  const [issueType, setIssueType] = useState(initialFilters.issueType);
+  const [status, setStatus] = useState(initialFilters.status);
+  const [assignee, setAssignee] = useState(initialFilters.assignee);
   const [numberSort, setNumberSort] = useState<NumberSort>(null);
+  const writtenSearch = useRef<string | null>(null);
 
-  // Dashboard「自分の担当」link passes ?assignee=… after first paint.
+  // Browser back and the 自分の担当 ?assignee= link update the address from outside.
   useEffect(() => {
-    const nextAssignee = searchParams.get("assignee") ?? "";
-    const nextQ = searchParams.get("q") ?? "";
-    const nextIssue = searchParams.get("issue_type") ?? "";
-    const nextStatus = searchParams.get("status") ?? "";
-    setAssignee(nextAssignee);
-    setTitleQuery(nextQ);
-    setIssueType(nextIssue);
-    setStatus(nextStatus);
-  }, [searchParams]);
+    const incoming = buildListSearch(listFiltersFromSearch(searchParams.toString()));
+    if (writtenSearch.current !== null) {
+      if (writtenSearch.current !== incoming) return;
+      writtenSearch.current = null;
+      rememberListFilters(workspaceId, incoming);
+      return;
+    }
+    const next = listFiltersFromSearch(searchParams.toString());
+    setTitleQuery(next.q);
+    setIssueType(next.issueType);
+    setStatus(next.status);
+    setAssignee(next.assignee);
+    rememberListFilters(workspaceId, incoming);
+  }, [searchParams, workspaceId]);
+
+  useEffect(() => {
+    const next = buildListSearch({ q: titleQuery, issueType, status, assignee });
+    const current = buildListSearch(listFiltersFromSearch(searchParams.toString()));
+    if (next === current) return;
+    writtenSearch.current = next;
+    rememberListFilters(workspaceId, next);
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+    // searchParams is read to skip no-op writes. It is not a dependency: when the
+    // address changes from outside, the effect above applies it, then this one runs
+    // only after local state matches.
+  }, [titleQuery, issueType, status, assignee, pathname, router, workspaceId]);
 
   useEffect(() => {
     if (!token || !workspaceId) return;
