@@ -7,7 +7,6 @@ import {
   Task,
   TaskComment,
   WorkspaceMember,
-  createComment,
   downloadAttachment,
   deleteAttachment,
   deleteTask,
@@ -15,6 +14,7 @@ import {
   listComments,
   listMembers,
   listTasks,
+  updateComment,
   updateTask,
   uploadAttachment,
 } from "@/lib/api";
@@ -26,7 +26,7 @@ export default function TaskDetailPage() {
   const params = useParams();
   const workspaceId = Number(params.id);
   const taskId = Number(params.taskId);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
 
   const [task, setTask] = useState<Task | null>(null);
@@ -34,7 +34,9 @@ export default function TaskDetailPage() {
   const [siblings, setSiblings] = useState<Task[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
-  const [commentBusy, setCommentBusy] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingBody, setEditingBody] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -149,7 +151,7 @@ export default function TaskDetailPage() {
         .map(Number)
         .filter((n) => !Number.isNaN(n));
 
-      const updated = await updateTask(token, workspaceId, taskId, {
+      const payload: Record<string, unknown> = {
         issue_type: issueType,
         title: title.trim(),
         description,
@@ -168,8 +170,17 @@ export default function TaskDetailPage() {
         parent_number: parentNumber ? Number(parentNumber) : null,
         clear_parent: !parentNumber,
         related_task_numbers: related,
-      });
+      };
+      const trimmedComment = commentBody.trim();
+      if (trimmedComment) payload.comment = trimmedComment;
+
+      const updated = await updateTask(token, workspaceId, taskId, payload);
       setTask(updated);
+      if (trimmedComment) {
+        const refreshed = await listComments(token, workspaceId, taskId);
+        setComments(refreshed);
+        setCommentBody("");
+      }
       setSaveNotice("更新しました");
     } catch (err) {
       setSaveNotice(null);
@@ -216,24 +227,25 @@ export default function TaskDetailPage() {
     }
   }
 
-  async function onPostComment(e: FormEvent) {
-    e.preventDefault();
-    if (!token || !commentBody.trim()) return;
-    setCommentBusy(true);
+  async function onSaveCommentEdit(commentId: number) {
+    if (!token || !editingBody.trim()) return;
+    setEditBusy(true);
     setError(null);
     try {
-      const created = await createComment(
+      const updated = await updateComment(
         token,
         workspaceId,
         taskId,
-        commentBody.trim(),
+        commentId,
+        editingBody.trim(),
       );
-      setComments((prev) => [...prev, created]);
-      setCommentBody("");
+      setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
+      setEditingCommentId(null);
+      setEditingBody("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "コメントの投稿に失敗しました");
+      setError(err instanceof Error ? err.message : "コメントの編集に失敗しました");
     } finally {
-      setCommentBusy(false);
+      setEditBusy(false);
     }
   }
 
@@ -410,6 +422,16 @@ export default function TaskDetailPage() {
             </p>
           ) : null}
 
+          <label className="field comment-form">
+            コメントを追加（任意）
+            <textarea
+              value={commentBody}
+              onChange={(e) => setCommentBody(e.target.value)}
+              maxLength={5000}
+              placeholder="同じ保存で課題の変更と一緒に投稿できます"
+            />
+          </label>
+
           {error ? <p className="error">{error}</p> : null}
 
           <div className="row">
@@ -432,42 +454,70 @@ export default function TaskDetailPage() {
           <p className="empty">まだコメントはありません</p>
         ) : (
           <ul className="comment-thread">
-            {comments.map((c) => (
-              <li key={c.id} className="comment-item">
-                <div className="comment-item-head">
-                  <span className="comment-author">
-                    {c.author_name?.trim() || "不明なユーザー"}
-                  </span>
-                  <span className="comment-time muted">
-                    {formatUpdatedAt(c.created_at)}
-                  </span>
-                </div>
-                <p className="comment-body">{c.body}</p>
-              </li>
-            ))}
+            {comments.map((c) => {
+              const mine = user && c.author_id === user.id;
+              const editing = editingCommentId === c.id;
+              return (
+                <li key={c.id} className="comment-item">
+                  <div className="comment-item-head">
+                    <span className="comment-author">
+                      {c.author_name?.trim() || "不明なユーザー"}
+                    </span>
+                    {mine && !editing ? (
+                      <button
+                        type="button"
+                        className="btn btn-ghost comment-edit-btn"
+                        onClick={() => {
+                          setEditingCommentId(c.id);
+                          setEditingBody(c.body);
+                        }}
+                      >
+                        編集
+                      </button>
+                    ) : null}
+                    <span className="comment-time muted">
+                      {formatUpdatedAt(c.updated_at ?? c.created_at)}
+                      {c.updated_at ? "（編集済み）" : ""}
+                    </span>
+                  </div>
+                  {editing ? (
+                    <div className="stack comment-form">
+                      <textarea
+                        value={editingBody}
+                        onChange={(e) => setEditingBody(e.target.value)}
+                        maxLength={5000}
+                        required
+                      />
+                      <div className="row">
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={editBusy || !editingBody.trim()}
+                          onClick={() => onSaveCommentEdit(c.id)}
+                        >
+                          コメントを更新
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          disabled={editBusy}
+                          onClick={() => {
+                            setEditingCommentId(null);
+                            setEditingBody("");
+                          }}
+                        >
+                          キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="comment-body">{c.body}</p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
-        <form className="stack comment-form" onSubmit={onPostComment}>
-          <label className="field">
-            コメントを追加
-            <textarea
-              value={commentBody}
-              onChange={(e) => setCommentBody(e.target.value)}
-              maxLength={5000}
-              required
-              placeholder="メンバーへの連絡やメモを書けます"
-            />
-          </label>
-          <div className="row">
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={commentBusy || !commentBody.trim()}
-            >
-              投稿
-            </button>
-          </div>
-        </form>
       </section>
 
       <section className="panel stack" style={{ marginTop: "1rem" }}>

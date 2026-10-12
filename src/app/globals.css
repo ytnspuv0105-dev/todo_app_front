@@ -462,6 +462,20 @@ textarea { min-height: 110px; resize: vertical; }
   color: var(--accent-2);
 }
 
+.history-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.history-comment-body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
 .comment-thread {
   list-style: none;
   margin: 0;
@@ -506,6 +520,11 @@ textarea { min-height: 110px; resize: vertical; }
 .comment-form textarea {
   min-height: 5.5rem;
   resize: vertical;
+}
+
+.comment-edit-btn {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.82rem;
 }
 
 .history-changes {

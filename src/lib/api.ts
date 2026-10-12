@@ -223,6 +223,7 @@ export type TaskComment = {
   author_name: string | null;
   body: string;
   created_at: string;
+  updated_at: string | null;
 };
 
 export function listTasks(token: string, workspaceId: number) {
@@ -287,6 +288,20 @@ export function createComment(
   return request<TaskComment>(
     `/workspaces/${workspaceId}/tasks/${taskId}/comments`,
     { method: "POST", body: JSON.stringify({ body }) },
+    token,
+  );
+}
+
+export function updateComment(
+  token: string,
+  workspaceId: number,
+  taskId: number,
+  commentId: number,
+  body: string,
+) {
+  return request<TaskComment>(
+    `/workspaces/${workspaceId}/tasks/${taskId}/comments/${commentId}`,
+    { method: "PATCH", body: JSON.stringify({ body }) },
     token,
   );
 }
