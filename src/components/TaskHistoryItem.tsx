@@ -9,6 +9,7 @@ type Props = {
 
 export default function TaskHistoryItem({ entry, workspaceId }: Props) {
   const detailHref = `/workspaces/${workspaceId}/tasks/${entry.task_id}`;
+  const actor = entry.created_by_name?.trim() || null;
 
   return (
     <li className="history-item">
@@ -23,6 +24,7 @@ export default function TaskHistoryItem({ entry, workspaceId }: Props) {
         <Link className="history-item-title" href={detailHref}>
           {entry.task_title}
         </Link>
+        {actor ? <span className="history-item-actor">{actor}</span> : null}
         <span className="history-item-time muted">
           {formatUpdatedAt(entry.created_at)}
         </span>

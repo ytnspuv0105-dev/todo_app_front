@@ -29,6 +29,7 @@ export type Invite = {
   token: string;
   role: string;
   created_at: string;
+  expires_at: string | null;
   invite_path: string;
 };
 
@@ -36,6 +37,7 @@ export type InviteInfo = {
   workspace_id: number;
   workspace_name: string;
   role: string;
+  expires_at: string | null;
 };
 
 export type Attachment = {
@@ -209,6 +211,8 @@ export type TaskChangeHistory = {
   kind: string;
   changes: TaskChangeItem[];
   created_by_id: number;
+  /** Null when the actor cannot be resolved; omit in UI (do not invent). */
+  created_by_name: string | null;
   created_at: string;
 };
 

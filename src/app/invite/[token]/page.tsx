@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { InviteInfo, getInviteInfo, joinInvite } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { inviteExpiryLabel, workspaceRoleLabel } from "@/lib/labels";
 
 export default function InvitePage() {
   const params = useParams();
@@ -58,13 +59,27 @@ export default function InvitePage() {
         {info ? (
           <>
             <p>
-              <strong>{info.workspace_name}</strong> に
-              {info.role === "admin" ? "管理者" : "メンバー"}として招待されています。
+              <strong>{info.workspace_name}</strong> への招待です。
             </p>
+            <dl className="invite-meta">
+              <div>
+                <dt>参加後のロール</dt>
+                <dd>{workspaceRoleLabel(info.role)}</dd>
+              </div>
+              <div>
+                <dt>リンクの有効期限</dt>
+                <dd>{inviteExpiryLabel(info.expires_at)}</dd>
+              </div>
+            </dl>
             {loading ? (
               <p className="muted">読み込み中…</p>
             ) : user ? (
-              <button className="btn btn-primary" type="button" onClick={onJoin} disabled={busy}>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={onJoin}
+                disabled={busy}
+              >
                 参加する
               </button>
             ) : (

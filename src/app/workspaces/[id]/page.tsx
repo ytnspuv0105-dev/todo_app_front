@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import TaskHistoryItem from "@/components/TaskHistoryItem";
 import TaskListItem from "@/components/TaskListItem";
 import {
+  Invite,
   Task,
   TaskChangeHistory,
   Workspace,
@@ -14,6 +15,7 @@ import {
   listTasks,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { inviteExpiryLabel, workspaceRoleLabel } from "@/lib/labels";
 
 const HISTORY_LIMIT = 20;
 
@@ -25,6 +27,7 @@ export default function WorkspaceDashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [history, setHistory] = useState<TaskChangeHistory[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [invite, setInvite] = useState<Invite | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,6 +70,7 @@ export default function WorkspaceDashboardPage() {
     try {
       const inv = await createInvite(token, workspaceId, "worker");
       const url = `${window.location.origin}${inv.invite_path}`;
+      setInvite(inv);
       setInviteUrl(url);
       await navigator.clipboard.writeText(url).catch(() => undefined);
     } catch (err) {
@@ -96,10 +100,23 @@ export default function WorkspaceDashboardPage() {
         ) : null}
       </div>
 
-      {inviteUrl ? (
-        <p className="panel muted" style={{ marginBottom: "1rem" }}>
-          招待リンク（クリップボードにコピー済み）: <code>{inviteUrl}</code>
-        </p>
+      {invite && inviteUrl ? (
+        <section className="panel stack invite-created" style={{ marginBottom: "1rem" }}>
+          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>招待リンクを発行しました</h3>
+          <dl className="invite-meta">
+            <div>
+              <dt>参加後のロール</dt>
+              <dd>{workspaceRoleLabel(invite.role)}</dd>
+            </div>
+            <div>
+              <dt>リンクの有効期限</dt>
+              <dd>{inviteExpiryLabel(invite.expires_at)}</dd>
+            </div>
+          </dl>
+          <p className="muted" style={{ margin: 0 }}>
+            クリップボードにコピー済み: <code className="invite-url">{inviteUrl}</code>
+          </p>
+        </section>
       ) : null}
 
       {error ? <p className="error">{error}</p> : null}
