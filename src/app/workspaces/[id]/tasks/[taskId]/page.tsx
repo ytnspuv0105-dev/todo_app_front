@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Task,
+  TaskChangeHistory,
   TaskComment,
   WorkspaceMember,
   downloadAttachment,
@@ -13,14 +14,16 @@ import {
   getTask,
   listComments,
   listMembers,
+  listTaskDetailHistory,
   listTasks,
   updateComment,
   updateTask,
   uploadAttachment,
 } from "@/lib/api";
+import TaskDetailTimeline from "@/components/TaskDetailTimeline";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
-import { formatTaskNumber, formatUpdatedAt } from "@/lib/taskDisplay";
+import { formatTaskNumber } from "@/lib/taskDisplay";
 
 export default function TaskDetailPage() {
   const params = useParams();
@@ -33,6 +36,7 @@ export default function TaskDetailPage() {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [siblings, setSiblings] = useState<Task[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
+  const [timeline, setTimeline] = useState<TaskChangeHistory[]>([]);
   const [commentBody, setCommentBody] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingBody, setEditingBody] = useState("");
@@ -134,16 +138,39 @@ export default function TaskDetailPage() {
       }
 
       try {
-        const c = await listComments(token, workspaceId, taskId);
-        if (!cancelled) setComments(c);
+        const [c, h] = await Promise.all([
+          listComments(token, workspaceId, taskId),
+          listTaskDetailHistory(token, workspaceId, taskId),
+        ]);
+        if (!cancelled) {
+          setComments(c);
+          setTimeline(h);
+        }
       } catch {
-        if (!cancelled) setComments([]);
+        if (!cancelled) {
+          setComments([]);
+          setTimeline([]);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [token, workspaceId, taskId]);
+
+  async function refreshTimeline() {
+    if (!token) return;
+    try {
+      const [c, h] = await Promise.all([
+        listComments(token, workspaceId, taskId),
+        listTaskDetailHistory(token, workspaceId, taskId),
+      ]);
+      setComments(c);
+      setTimeline(h);
+    } catch {
+      /* keep existing timeline */
+    }
+  }
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
@@ -183,11 +210,8 @@ export default function TaskDetailPage() {
 
       const updated = await updateTask(token, workspaceId, taskId, payload);
       setTask(updated);
-      if (trimmedComment) {
-        const refreshed = await listComments(token, workspaceId, taskId);
-        setComments(refreshed);
-        setCommentBody("");
-      }
+      if (trimmedComment) setCommentBody("");
+      await refreshTimeline();
       setSaveNotice("更新しました");
     } catch (err) {
       setSaveNotice(null);
@@ -249,6 +273,7 @@ export default function TaskDetailPage() {
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
       setEditingCommentId(null);
       setEditingBody("");
+      await refreshTimeline();
     } catch (err) {
       setError(err instanceof Error ? err.message : "コメントの編集に失敗しました");
     } finally {
@@ -454,77 +479,27 @@ export default function TaskDetailPage() {
 
       <section className="panel stack" style={{ marginTop: "1rem" }}>
         <div className="section-head">
-          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>コメント</h3>
-          <span className="muted">{comments.length} 件</span>
+          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>変更履歴</h3>
+          <span className="muted">{timeline.length} 件</span>
         </div>
-        {comments.length === 0 ? (
-          <p className="empty">まだコメントはありません</p>
-        ) : (
-          <ul className="comment-thread">
-            {comments.map((c) => {
-              const mine = user && c.author_id === user.id;
-              const editing = editingCommentId === c.id;
-              return (
-                <li key={c.id} className="comment-item">
-                  <div className="comment-item-head">
-                    <span className="comment-author">
-                      {c.author_name?.trim() || "不明なユーザー"}
-                    </span>
-                    {mine && !editing ? (
-                      <button
-                        type="button"
-                        className="btn btn-ghost comment-edit-btn"
-                        onClick={() => {
-                          setEditingCommentId(c.id);
-                          setEditingBody(c.body);
-                        }}
-                      >
-                        編集
-                      </button>
-                    ) : null}
-                    <span className="comment-time muted">
-                      {formatUpdatedAt(c.updated_at ?? c.created_at)}
-                      {c.updated_at ? "（編集済み）" : ""}
-                    </span>
-                  </div>
-                  {editing ? (
-                    <div className="stack comment-form">
-                      <textarea
-                        value={editingBody}
-                        onChange={(e) => setEditingBody(e.target.value)}
-                        maxLength={5000}
-                        required
-                      />
-                      <div className="row">
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          disabled={editBusy || !editingBody.trim()}
-                          onClick={() => onSaveCommentEdit(c.id)}
-                        >
-                          コメントを更新
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          disabled={editBusy}
-                          onClick={() => {
-                            setEditingCommentId(null);
-                            setEditingBody("");
-                          }}
-                        >
-                          キャンセル
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="comment-body">{c.body}</p>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <TaskDetailTimeline
+          entries={timeline}
+          comments={comments}
+          currentUserId={user?.id ?? null}
+          editingCommentId={editingCommentId}
+          editingBody={editingBody}
+          editBusy={editBusy}
+          onStartEdit={(c) => {
+            setEditingCommentId(c.id);
+            setEditingBody(c.body);
+          }}
+          onChangeEditingBody={setEditingBody}
+          onSaveEdit={onSaveCommentEdit}
+          onCancelEdit={() => {
+            setEditingCommentId(null);
+            setEditingBody("");
+          }}
+        />
       </section>
 
       <section className="panel stack" style={{ marginTop: "1rem" }}>

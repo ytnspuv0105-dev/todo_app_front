@@ -210,6 +210,8 @@ export type TaskChangeHistory = {
   task_title: string;
   kind: string;
   changes: TaskChangeItem[];
+  /** Present when this row is tied to a task comment. */
+  comment_id?: number | null;
   created_by_id: number;
   /** Null when the actor cannot be resolved; omit in UI (do not invent). */
   created_by_name: string | null;
@@ -233,6 +235,19 @@ export function listTasks(token: string, workspaceId: number) {
 export function listTaskHistory(token: string, workspaceId: number, limit = 20) {
   return request<TaskChangeHistory[]>(
     `/workspaces/${workspaceId}/task-history?limit=${limit}`,
+    {},
+    token,
+  );
+}
+
+export function listTaskDetailHistory(
+  token: string,
+  workspaceId: number,
+  taskId: number,
+  limit = 100,
+) {
+  return request<TaskChangeHistory[]>(
+    `/workspaces/${workspaceId}/tasks/${taskId}/history?limit=${limit}`,
     {},
     token,
   );
