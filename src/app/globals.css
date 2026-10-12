@@ -933,19 +933,13 @@ a.task-number:hover {
   pointer-events: none;
 }
 
-.gantt-today-line {
+.gantt-today-col {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--accent-2);
+  background: rgba(44, 106, 79, 0.12);
   pointer-events: none;
-  z-index: 2;
-}
-
-.gantt-head .gantt-today-line {
-  z-index: 3;
+  z-index: 0;
 }
 
 .gantt-bar {
@@ -956,9 +950,14 @@ a.task-number:hover {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   box-shadow: 0 5px 12px rgba(31, 79, 59, 0.2);
   text-decoration: none;
-  cursor: pointer;
+  cursor: grab;
   transition: filter 0.15s ease, opacity 0.15s ease;
   touch-action: none;
+  z-index: 1;
+}
+
+.gantt-bar:active {
+  cursor: grabbing;
 }
 
 .gantt-bar:hover {
@@ -1009,7 +1008,7 @@ a.task-number:hover {
 .gantt-tick.is-today {
   color: var(--accent-2);
   font-weight: 700;
-  background: rgba(44, 106, 79, 0.12);
+  background: rgba(44, 106, 79, 0.18);
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 
