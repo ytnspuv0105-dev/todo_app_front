@@ -18,6 +18,7 @@ import {
   formatDateOnly,
   formatTickLabel,
   localToday,
+  parseDateOnly,
 } from "@/lib/gantt";
 import { formatTaskNumber } from "@/lib/taskDisplay";
 
@@ -29,21 +30,33 @@ type Props = {
 };
 
 const DAY_PX = 40;
+const SAVE_ERROR = "日付の保存に失敗しました";
+
+type DragMode = "start" | "end" | "move";
 
 type DragSession = {
   taskId: number;
-  edge: "start" | "end";
+  mode: DragMode;
   track: HTMLElement;
   rangeStart: Date;
   dayCount: number;
-  /** Working dates during the drag (always both set). */
-  start: string;
-  due: string;
+  hasStartDate: boolean;
+  hasDueDate: boolean;
+  /** Day index under the pointer when the drag began (move mode). */
+  anchorDayIndex: number;
+  /** Inclusive bar extents at drag start (for move shift). */
+  originStart: string;
+  originDue: string;
+  /** Working dates during the drag (null = leave that field empty). */
+  start: string | null;
+  due: string | null;
+  originalStart: string | null;
+  originalDue: string | null;
 };
 
 type DateDraft = {
-  start_date: string;
-  due_date: string;
+  start_date: string | null;
+  due_date: string | null;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -57,6 +70,45 @@ function dayIndexFromClientX(
 ) {
   const rect = track.getBoundingClientRect();
   return clamp(Math.floor((clientX - rect.left) / DAY_PX), 0, dayCount - 1);
+}
+
+function TodayColumn({ index }: { index: number }) {
+  if (index < 0) return null;
+  return (
+    <div
+      className="gantt-today-col"
+      style={{ left: index * DAY_PX, width: DAY_PX }}
+      aria-hidden
+    />
+  );
+}
+
+function shiftInclusiveBar(
+  originStart: string,
+  originDue: string,
+  delta: number,
+  rangeStart: Date,
+  dayCount: number,
+): { start: string; due: string } {
+  const start0 = parseDateOnly(originStart)!;
+  const due0 = parseDateOnly(originDue)!;
+  const span = dayDiff(start0, due0);
+  let start = addDays(start0, delta);
+  let due = addDays(due0, delta);
+  const rangeEnd = addDays(rangeStart, dayCount - 1);
+
+  if (start.getTime() < rangeStart.getTime()) {
+    start = rangeStart;
+    due = addDays(start, span);
+  }
+  if (due.getTime() > rangeEnd.getTime()) {
+    due = rangeEnd;
+    start = addDays(due, -span);
+  }
+  if (start.getTime() < rangeStart.getTime()) {
+    start = rangeStart;
+  }
+  return { start: formatDateOnly(start), due: formatDateOnly(due) };
 }
 
 export default function AssigneeGantt({
@@ -106,71 +158,159 @@ export default function AssigneeGantt({
     didInitialScrollRef.current = true;
   }, [model, today]);
 
+  function clearDraft(taskId: number) {
+    setDrafts((prev) => {
+      const next = { ...prev };
+      delete next[taskId];
+      return next;
+    });
+  }
+
+  function restoreOriginalDates(session: DragSession) {
+    clearDraft(session.taskId);
+  }
+
+  function applyDraft(taskId: number, start: string | null, due: string | null) {
+    setDrafts((prev) => ({
+      ...prev,
+      [taskId]: { start_date: start, due_date: due },
+    }));
+  }
+
   function previewDrag(clientX: number) {
     const drag = dragRef.current;
     if (!drag) return;
-    const dayStr = formatDateOnly(
-      addDays(
-        drag.rangeStart,
-        dayIndexFromClientX(clientX, drag.track, drag.dayCount),
-      ),
-    );
-    let start = drag.start;
-    let due = drag.due;
-    if (drag.edge === "start") {
+    const dayIdx = dayIndexFromClientX(clientX, drag.track, drag.dayCount);
+    const dayStr = formatDateOnly(addDays(drag.rangeStart, dayIdx));
+
+    if (drag.mode === "move") {
+      const delta = dayIdx - drag.anchorDayIndex;
+      if (drag.hasStartDate && drag.hasDueDate) {
+        const shifted = shiftInclusiveBar(
+          drag.originStart,
+          drag.originDue,
+          delta,
+          drag.rangeStart,
+          drag.dayCount,
+        );
+        drag.start = shifted.start;
+        drag.due = shifted.due;
+      } else if (drag.hasStartDate) {
+        const shifted = shiftInclusiveBar(
+          drag.originStart,
+          drag.originStart,
+          delta,
+          drag.rangeStart,
+          drag.dayCount,
+        );
+        drag.start = shifted.start;
+        drag.due = null;
+      } else {
+        const shifted = shiftInclusiveBar(
+          drag.originDue,
+          drag.originDue,
+          delta,
+          drag.rangeStart,
+          drag.dayCount,
+        );
+        drag.start = null;
+        drag.due = shifted.due;
+      }
+      applyDraft(drag.taskId, drag.start, drag.due);
+      return;
+    }
+
+    let start = drag.start ?? dayStr;
+    let due = drag.due ?? dayStr;
+    if (drag.mode === "start") {
       start = dayStr > due ? due : dayStr;
     } else {
       due = dayStr < start ? start : dayStr;
     }
     drag.start = start;
     drag.due = due;
-    setDrafts((prev) => ({
-      ...prev,
-      [drag.taskId]: { start_date: start, due_date: due },
-    }));
+    applyDraft(drag.taskId, start, due);
   }
 
   function beginDrag(
-    edge: "start" | "end",
+    mode: DragMode,
     task: Task,
     track: HTMLElement,
     rangeStart: Date,
     dayCount: number,
-    e: ReactPointerEvent,
+    e: ReactPointerEvent<HTMLElement>,
   ) {
     e.preventDefault();
     e.stopPropagation();
     movedRef.current = false;
     suppressClickRef.current = false;
 
-    const start = task.start_date ?? task.due_date!;
-    const due = task.due_date ?? task.start_date!;
+    const hasStartDate = !!task.start_date;
+    const hasDueDate = !!task.due_date;
+    const originStart = task.start_date ?? task.due_date!;
+    const originDue = task.due_date ?? task.start_date!;
+    const captureEl = e.currentTarget;
+    const anchorDayIndex = dayIndexFromClientX(e.clientX, track, dayCount);
 
     dragRef.current = {
       taskId: task.id,
-      edge,
+      mode,
       track,
       rangeStart,
       dayCount,
-      start,
-      due,
+      hasStartDate,
+      hasDueDate,
+      anchorDayIndex,
+      originStart,
+      originDue,
+      start: hasStartDate ? task.start_date : hasDueDate ? null : originStart,
+      due: hasDueDate ? task.due_date : hasStartDate ? null : originDue,
+      originalStart: task.start_date,
+      originalDue: task.due_date,
     };
 
-    setDrafts((prev) => ({
-      ...prev,
-      [task.id]: { start_date: start, due_date: due },
-    }));
+    // Edge drag previews use both ends filled (may introduce the missing date).
+    if (mode === "start" || mode === "end") {
+      dragRef.current.start = originStart;
+      dragRef.current.due = originDue;
+      applyDraft(task.id, originStart, originDue);
+    } else {
+      applyDraft(
+        task.id,
+        dragRef.current.start,
+        dragRef.current.due,
+      );
+    }
+
+    try {
+      captureEl.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture may be unavailable; window listeners still work */
+    }
 
     const onMove = (ev: PointerEvent) => {
+      if (dragRef.current?.taskId !== task.id) return;
       movedRef.current = true;
       suppressClickRef.current = true;
+      ev.preventDefault();
       previewDrag(ev.clientX);
     };
 
     const finish = async (ev: PointerEvent) => {
+      captureEl.removeEventListener("pointermove", onMove);
+      captureEl.removeEventListener("pointerup", finish);
+      captureEl.removeEventListener("pointercancel", finish);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", finish);
+
+      try {
+        if (captureEl.hasPointerCapture(ev.pointerId)) {
+          captureEl.releasePointerCapture(ev.pointerId);
+        }
+      } catch {
+        /* ignore */
+      }
 
       previewDrag(ev.clientX);
       const session = dragRef.current;
@@ -178,20 +318,20 @@ export default function AssigneeGantt({
       if (!session) return;
 
       const original = tasks.find((t) => t.id === session.taskId);
-      if (!original) return;
+      if (!original) {
+        restoreOriginalDates(session);
+        return;
+      }
 
-      const { start: finalStart, due: finalDue, edge: dragEdge } = session;
+      const finalStart = session.start;
+      const finalDue = session.due;
 
-      // No movement / no change → skip save and allow click.
-      if (
+      const unchanged =
         !movedRef.current ||
-        (original.start_date === finalStart && original.due_date === finalDue)
-      ) {
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[session.taskId];
-          return next;
-        });
+        (original.start_date === finalStart && original.due_date === finalDue);
+
+      if (unchanged) {
+        restoreOriginalDates(session);
         window.setTimeout(() => {
           suppressClickRef.current = false;
         }, 0);
@@ -199,8 +339,21 @@ export default function AssigneeGantt({
       }
 
       const payload: Record<string, unknown> = {};
-      if (original.start_date && original.due_date) {
-        if (dragEdge === "start") {
+      if (session.mode === "move") {
+        if (session.hasStartDate && session.hasDueDate) {
+          payload.start_date = finalStart;
+          payload.due_date = finalDue;
+          payload.clear_start_date = false;
+          payload.clear_due_date = false;
+        } else if (session.hasStartDate) {
+          payload.start_date = finalStart;
+          payload.clear_start_date = false;
+        } else {
+          payload.due_date = finalDue;
+          payload.clear_due_date = false;
+        }
+      } else if (original.start_date && original.due_date) {
+        if (session.mode === "start") {
           payload.start_date = finalStart;
           payload.clear_start_date = false;
         } else {
@@ -208,7 +361,7 @@ export default function AssigneeGantt({
           payload.clear_due_date = false;
         }
       } else {
-        // Single-date bar: dragging an edge can introduce the missing date.
+        // Single-date bar edge drag can introduce the missing date.
         payload.start_date = finalStart;
         payload.due_date = finalDue;
         payload.clear_start_date = false;
@@ -225,18 +378,10 @@ export default function AssigneeGantt({
           payload,
         );
         onTaskUpdated(updated);
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[session.taskId];
-          return next;
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "保存に失敗しました");
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[session.taskId];
-          return next;
-        });
+        clearDraft(session.taskId);
+      } catch {
+        setError(SAVE_ERROR);
+        restoreOriginalDates(session);
       } finally {
         setSavingId(null);
         window.setTimeout(() => {
@@ -245,7 +390,10 @@ export default function AssigneeGantt({
       }
     };
 
-    window.addEventListener("pointermove", onMove);
+    captureEl.addEventListener("pointermove", onMove, { passive: false });
+    captureEl.addEventListener("pointerup", finish);
+    captureEl.addEventListener("pointercancel", finish);
+    window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", finish);
     window.addEventListener("pointercancel", finish);
     previewDrag(e.clientX);
@@ -261,6 +409,7 @@ export default function AssigneeGantt({
 
   const { dayCount, days, groups, rangeStart, rangeEnd } = model;
   const timelineWidth = dayCount * DAY_PX;
+  const todayIndex = dayDiff(rangeStart, today);
 
   return (
     <div className="gantt">
@@ -268,9 +417,13 @@ export default function AssigneeGantt({
         表示期間: {formatDateOnly(rangeStart)} ～ {formatDateOnly(rangeEnd)}
       </p>
       <p className="gantt-hint muted">
-        バーの端をドラッグすると開始日・期限日を変更できます。
+        バーをドラッグして期間を移動、端で開始日・期限日を変更できます。
       </p>
-      {error ? <p className="error">{error}</p> : null}
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
       <div
         className="gantt-scroll"
         role="region"
@@ -313,8 +466,11 @@ export default function AssigneeGantt({
                 className="gantt-group-span"
                 style={{ width: timelineWidth }}
                 aria-hidden
-              />
+              >
+                <TodayColumn index={todayIndex} />
+              </div>
 
+              {/* One task per row — overlapping bars never share a track. */}
               {group.bars.map((bar) => {
                 const left = bar.startIndex * DAY_PX + 2;
                 const width = Math.max(bar.daySpan * DAY_PX - 4, DAY_PX - 4);
@@ -336,6 +492,7 @@ export default function AssigneeGantt({
                     </Link>
                     <div className="gantt-track" style={{ width: timelineWidth }}>
                       <div className="gantt-day-lines" aria-hidden />
+                      <TodayColumn index={todayIndex} />
                       <div
                         className={`gantt-bar${busy ? " is-saving" : ""}`}
                         style={{ left, width }}
@@ -343,6 +500,27 @@ export default function AssigneeGantt({
                         role="link"
                         tabIndex={0}
                         aria-label={dateTitle}
+                        onPointerDown={(ev) => {
+                          if (
+                            (ev.target as HTMLElement).closest(
+                              ".gantt-bar-handle",
+                            )
+                          ) {
+                            return;
+                          }
+                          const trackEl = ev.currentTarget.closest(
+                            ".gantt-track",
+                          ) as HTMLElement | null;
+                          if (!trackEl || busy) return;
+                          beginDrag(
+                            "move",
+                            bar.task,
+                            trackEl,
+                            rangeStart,
+                            dayCount,
+                            ev,
+                          );
+                        }}
                         onClick={(ev) => {
                           if (suppressClickRef.current) {
                             ev.preventDefault();
@@ -364,14 +542,14 @@ export default function AssigneeGantt({
                           aria-label={`${label}の開始日を変更`}
                           disabled={busy}
                           onPointerDown={(ev) => {
-                            const track = ev.currentTarget.closest(
+                            const trackEl = ev.currentTarget.closest(
                               ".gantt-track",
                             ) as HTMLElement | null;
-                            if (!track) return;
+                            if (!trackEl) return;
                             beginDrag(
                               "start",
                               bar.task,
-                              track,
+                              trackEl,
                               rangeStart,
                               dayCount,
                               ev,
@@ -384,14 +562,14 @@ export default function AssigneeGantt({
                           aria-label={`${label}の期限日を変更`}
                           disabled={busy}
                           onPointerDown={(ev) => {
-                            const track = ev.currentTarget.closest(
+                            const trackEl = ev.currentTarget.closest(
                               ".gantt-track",
                             ) as HTMLElement | null;
-                            if (!track) return;
+                            if (!trackEl) return;
                             beginDrag(
                               "end",
                               bar.task,
-                              track,
+                              trackEl,
                               rangeStart,
                               dayCount,
                               ev,
