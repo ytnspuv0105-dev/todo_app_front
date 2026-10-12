@@ -14,7 +14,7 @@
   --radius: 16px;
   --max: 960px;
   --ws-sidebar: 220px;
-  --ws-max: 1120px;
+  --ws-page-pad: 1rem;
 }
 
 * { box-sizing: border-box; }
@@ -253,9 +253,11 @@ textarea { min-height: 110px; resize: vertical; }
 
 /* Workspace app shell: side menu (PC) / hamburger (mobile) */
 .ws-app {
-  width: min(100% - 1.5rem, var(--ws-max));
-  margin: 0 auto;
-  padding: 1.25rem 0 3rem;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1.25rem var(--ws-page-pad) 3rem;
+  box-sizing: border-box;
 }
 
 .ws-top {
@@ -1093,7 +1095,12 @@ a.task-number:hover {
   .topbar { align-items: flex-start; flex-direction: column; }
   .list-item { flex-direction: column; align-items: flex-start; }
 
-  .ws-app { width: min(100% - 1rem, var(--ws-max)); padding-top: 1rem; }
+  .ws-app {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 1rem 0.75rem 2.5rem;
+  }
   .ws-menu-btn { display: inline-flex; flex-shrink: 0; }
   .ws-body { grid-template-columns: 1fr; }
   .ws-sidebar { display: none; }
