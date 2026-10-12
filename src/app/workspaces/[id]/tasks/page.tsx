@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import TaskTable, { NumberSort } from "@/components/TaskTable";
 import { Task, listTasks } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -10,18 +10,38 @@ import { ISSUE_TYPES, STATUSES, labelOf } from "@/lib/labels";
 
 const UNASSIGNED = "__unassigned__";
 
-export default function TaskListPage() {
+function TaskListContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const workspaceId = Number(params.id);
   const { token } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [issueType, setIssueType] = useState("");
-  const [status, setStatus] = useState("");
-  const [assignee, setAssignee] = useState("");
+  const [titleQuery, setTitleQuery] = useState(
+    () => searchParams.get("q") ?? "",
+  );
+  const [issueType, setIssueType] = useState(
+    () => searchParams.get("issue_type") ?? "",
+  );
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
+  const [assignee, setAssignee] = useState(
+    () => searchParams.get("assignee") ?? "",
+  );
   const [numberSort, setNumberSort] = useState<NumberSort>(null);
+
+  // Dashboard「自分の担当」link passes ?assignee=… after first paint.
+  useEffect(() => {
+    const nextAssignee = searchParams.get("assignee") ?? "";
+    const nextQ = searchParams.get("q") ?? "";
+    const nextIssue = searchParams.get("issue_type") ?? "";
+    const nextStatus = searchParams.get("status") ?? "";
+    setAssignee(nextAssignee);
+    setTitleQuery(nextQ);
+    setIssueType(nextIssue);
+    setStatus(nextStatus);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!token || !workspaceId) return;
@@ -80,7 +100,11 @@ export default function TaskListPage() {
   }, [tasks]);
 
   const filtered = useMemo(() => {
+    const needle = titleQuery.trim().toLocaleLowerCase("ja");
     const rows = tasks.filter((t) => {
+      if (needle && !t.title.toLocaleLowerCase("ja").includes(needle)) {
+        return false;
+      }
       if (issueType && t.issue_type !== issueType) return false;
       if (status && t.status !== status) return false;
       if (assignee === UNASSIGNED) {
@@ -97,18 +121,18 @@ export default function TaskListPage() {
     } else if (numberSort === "desc") {
       sorted.sort((a, b) => b.number - a.number);
     } else {
-      // Default: 更新日 descending (API already returns this; keep stable client-side)
       sorted.sort(
         (a, b) =>
           new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
       );
     }
     return sorted;
-  }, [tasks, issueType, status, assignee, numberSort]);
+  }, [tasks, titleQuery, issueType, status, assignee, numberSort]);
 
-  const filtersActive = Boolean(issueType || status || assignee);
+  const filtersActive = Boolean(titleQuery.trim() || issueType || status || assignee);
 
   function clearFilters() {
+    setTitleQuery("");
     setIssueType("");
     setStatus("");
     setAssignee("");
@@ -147,6 +171,16 @@ export default function TaskListPage() {
 
         {!loading && tasks.length > 0 ? (
           <div className="task-filters" role="group" aria-label="課題の絞り込み">
+            <label className="task-filter task-filter-search">
+              件名
+              <input
+                type="search"
+                value={titleQuery}
+                onChange={(e) => setTitleQuery(e.target.value)}
+                placeholder="件名で検索"
+                autoComplete="off"
+              />
+            </label>
             <label className="task-filter">
               種別
               <select
@@ -212,5 +246,13 @@ export default function TaskListPage() {
         )}
       </section>
     </>
+  );
+}
+
+export default function TaskListPage() {
+  return (
+    <Suspense fallback={<p className="muted">読み込み中…</p>}>
+      <TaskListContent />
+    </Suspense>
   );
 }

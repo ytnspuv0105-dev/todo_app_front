@@ -707,8 +707,65 @@ a.task-number:hover {
   flex: 1 1 140px;
 }
 
-.task-filter select {
+.task-filter-search {
+  flex: 1 1 200px;
+  min-width: min(100%, 180px);
+}
+
+.task-filter select,
+.task-filter input[type="search"] {
   min-width: 0;
+}
+
+.task-filter input[type="search"] {
+  width: 100%;
+}
+
+.section-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.due-soon-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.due-soon-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.due-soon-title {
+  flex: 1 1 12rem;
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.due-soon-title:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.due-soon-date {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* Task list table */
