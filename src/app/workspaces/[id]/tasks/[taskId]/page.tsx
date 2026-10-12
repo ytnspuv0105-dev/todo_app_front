@@ -5,16 +5,22 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Task,
+  TaskChangeHistory,
+  TaskComment,
   WorkspaceMember,
   downloadAttachment,
   deleteAttachment,
   deleteTask,
   getTask,
+  listComments,
   listMembers,
+  listTaskDetailHistory,
   listTasks,
+  updateComment,
   updateTask,
   uploadAttachment,
 } from "@/lib/api";
+import TaskDetailTimeline from "@/components/TaskDetailTimeline";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
 import { formatTaskNumber } from "@/lib/taskDisplay";
@@ -23,12 +29,18 @@ export default function TaskDetailPage() {
   const params = useParams();
   const workspaceId = Number(params.id);
   const taskId = Number(params.taskId);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
 
   const [task, setTask] = useState<Task | null>(null);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [siblings, setSiblings] = useState<Task[]>([]);
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [timeline, setTimeline] = useState<TaskChangeHistory[]>([]);
+  const [commentBody, setCommentBody] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingBody, setEditingBody] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -94,6 +106,8 @@ export default function TaskDetailPage() {
     let cancelled = false;
     (async () => {
       try {
+        // Core task fields must load even if comments are unavailable
+        // (older backend without /comments, or a temporary comments API error).
         const [t, m, all] = await Promise.all([
           getTask(token, workspaceId, taskId),
           listMembers(token, workspaceId),
@@ -122,11 +136,41 @@ export default function TaskDetailPage() {
       } finally {
         if (!cancelled) setLoading(false);
       }
+
+      try {
+        const [c, h] = await Promise.all([
+          listComments(token, workspaceId, taskId),
+          listTaskDetailHistory(token, workspaceId, taskId),
+        ]);
+        if (!cancelled) {
+          setComments(c);
+          setTimeline(h);
+        }
+      } catch {
+        if (!cancelled) {
+          setComments([]);
+          setTimeline([]);
+        }
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, [token, workspaceId, taskId]);
+
+  async function refreshTimeline() {
+    if (!token) return;
+    try {
+      const [c, h] = await Promise.all([
+        listComments(token, workspaceId, taskId),
+        listTaskDetailHistory(token, workspaceId, taskId),
+      ]);
+      setComments(c);
+      setTimeline(h);
+    } catch {
+      /* keep existing timeline */
+    }
+  }
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
@@ -141,7 +185,7 @@ export default function TaskDetailPage() {
         .map(Number)
         .filter((n) => !Number.isNaN(n));
 
-      const updated = await updateTask(token, workspaceId, taskId, {
+      const payload: Record<string, unknown> = {
         issue_type: issueType,
         title: title.trim(),
         description,
@@ -160,8 +204,14 @@ export default function TaskDetailPage() {
         parent_number: parentNumber ? Number(parentNumber) : null,
         clear_parent: !parentNumber,
         related_task_numbers: related,
-      });
+      };
+      const trimmedComment = commentBody.trim();
+      if (trimmedComment) payload.comment = trimmedComment;
+
+      const updated = await updateTask(token, workspaceId, taskId, payload);
       setTask(updated);
+      if (trimmedComment) setCommentBody("");
+      await refreshTimeline();
       setSaveNotice("更新しました");
     } catch (err) {
       setSaveNotice(null);
@@ -205,6 +255,29 @@ export default function TaskDetailPage() {
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "添付の削除に失敗しました");
+    }
+  }
+
+  async function onSaveCommentEdit(commentId: number) {
+    if (!token || !editingBody.trim()) return;
+    setEditBusy(true);
+    setError(null);
+    try {
+      const updated = await updateComment(
+        token,
+        workspaceId,
+        taskId,
+        commentId,
+        editingBody.trim(),
+      );
+      setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
+      setEditingCommentId(null);
+      setEditingBody("");
+      await refreshTimeline();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "コメントの編集に失敗しました");
+    } finally {
+      setEditBusy(false);
     }
   }
 
@@ -381,15 +454,47 @@ export default function TaskDetailPage() {
             </p>
           ) : null}
 
-          {error ? <p className="error">{error}</p> : null}
-
-          <div className="row">
-            <button className="btn btn-primary" type="submit" disabled={busy}>
-              保存
-            </button>
-            <button className="btn btn-danger" type="button" onClick={onDelete}>
-              削除
-            </button>
+          <div className="detail-board stack">
+            <div className="section-head">
+              <h3 style={{ margin: 0, fontSize: "1.05rem" }}>変更履歴</h3>
+              <span className="muted">{timeline.length} 件</span>
+            </div>
+            <TaskDetailTimeline
+              entries={timeline}
+              comments={comments}
+              currentUserId={user?.id ?? null}
+              editingCommentId={editingCommentId}
+              editingBody={editingBody}
+              editBusy={editBusy}
+              onStartEdit={(c) => {
+                setEditingCommentId(c.id);
+                setEditingBody(c.body);
+              }}
+              onChangeEditingBody={setEditingBody}
+              onSaveEdit={onSaveCommentEdit}
+              onCancelEdit={() => {
+                setEditingCommentId(null);
+                setEditingBody("");
+              }}
+            />
+            <label className="field comment-form detail-board-reply">
+              コメントを追加（任意）
+              <textarea
+                value={commentBody}
+                onChange={(e) => setCommentBody(e.target.value)}
+                maxLength={5000}
+                placeholder="同じ保存で課題の変更と一緒に投稿できます"
+              />
+            </label>
+            {error ? <p className="error">{error}</p> : null}
+            <div className="row">
+              <button className="btn btn-primary" type="submit" disabled={busy}>
+                保存
+              </button>
+              <button className="btn btn-danger" type="button" onClick={onDelete}>
+                削除
+              </button>
+            </div>
           </div>
         </form>
       </section>

@@ -210,10 +210,22 @@ export type TaskChangeHistory = {
   task_title: string;
   kind: string;
   changes: TaskChangeItem[];
+  /** Present when this row is tied to a task comment. */
+  comment_id?: number | null;
   created_by_id: number;
   /** Null when the actor cannot be resolved; omit in UI (do not invent). */
   created_by_name: string | null;
   created_at: string;
+};
+
+export type TaskComment = {
+  id: number;
+  task_id: number;
+  author_id: number;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string | null;
 };
 
 export function listTasks(token: string, workspaceId: number) {
@@ -223,6 +235,19 @@ export function listTasks(token: string, workspaceId: number) {
 export function listTaskHistory(token: string, workspaceId: number, limit = 20) {
   return request<TaskChangeHistory[]>(
     `/workspaces/${workspaceId}/task-history?limit=${limit}`,
+    {},
+    token,
+  );
+}
+
+export function listTaskDetailHistory(
+  token: string,
+  workspaceId: number,
+  taskId: number,
+  limit = 100,
+) {
+  return request<TaskChangeHistory[]>(
+    `/workspaces/${workspaceId}/tasks/${taskId}/history?limit=${limit}`,
     {},
     token,
   );
@@ -257,6 +282,41 @@ export function deleteTask(token: string, workspaceId: number, taskId: number) {
   return request<void>(
     `/workspaces/${workspaceId}/tasks/${taskId}`,
     { method: "DELETE" },
+    token,
+  );
+}
+
+export function listComments(token: string, workspaceId: number, taskId: number) {
+  return request<TaskComment[]>(
+    `/workspaces/${workspaceId}/tasks/${taskId}/comments`,
+    {},
+    token,
+  );
+}
+
+export function createComment(
+  token: string,
+  workspaceId: number,
+  taskId: number,
+  body: string,
+) {
+  return request<TaskComment>(
+    `/workspaces/${workspaceId}/tasks/${taskId}/comments`,
+    { method: "POST", body: JSON.stringify({ body }) },
+    token,
+  );
+}
+
+export function updateComment(
+  token: string,
+  workspaceId: number,
+  taskId: number,
+  commentId: number,
+  body: string,
+) {
+  return request<TaskComment>(
+    `/workspaces/${workspaceId}/tasks/${taskId}/comments/${commentId}`,
+    { method: "PATCH", body: JSON.stringify({ body }) },
     token,
   );
 }

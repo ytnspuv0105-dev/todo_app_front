@@ -454,11 +454,88 @@ textarea { min-height: 110px; resize: vertical; }
   word-break: break-all;
 }
 
-.history-create-label {
+.history-create-label,
+.history-comment-label {
   margin: 0;
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--accent-2);
+}
+
+.history-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.history-comment-body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.comment-thread {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.comment-item {
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.comment-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.65rem;
+  margin-bottom: 0.35rem;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: var(--accent-2);
+}
+
+.comment-time {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.comment-body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.comment-form textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+.detail-board {
+  margin-top: 1.25rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.detail-board-reply {
+  margin-top: 0.35rem;
+}
+
+
+.comment-edit-btn {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.82rem;
 }
 
 .history-changes {
