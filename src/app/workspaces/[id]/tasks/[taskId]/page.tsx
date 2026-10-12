@@ -102,17 +102,17 @@ export default function TaskDetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [t, m, all, c] = await Promise.all([
+        // Core task fields must load even if comments are unavailable
+        // (older backend without /comments, or a temporary comments API error).
+        const [t, m, all] = await Promise.all([
           getTask(token, workspaceId, taskId),
           listMembers(token, workspaceId),
           listTasks(token, workspaceId),
-          listComments(token, workspaceId, taskId),
         ]);
         if (cancelled) return;
         setTask(t);
         setMembers(m);
         setSiblings(all.filter((x) => x.id !== taskId));
-        setComments(c);
         setIssueType(t.issue_type);
         setTitle(t.title);
         setDescription(t.description);
@@ -131,6 +131,13 @@ export default function TaskDetailPage() {
         }
       } finally {
         if (!cancelled) setLoading(false);
+      }
+
+      try {
+        const c = await listComments(token, workspaceId, taskId);
+        if (!cancelled) setComments(c);
+      } catch {
+        if (!cancelled) setComments([]);
       }
     })();
     return () => {
