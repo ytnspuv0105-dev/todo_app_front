@@ -454,52 +454,49 @@ export default function TaskDetailPage() {
             </p>
           ) : null}
 
-          <label className="field comment-form">
-            コメントを追加（任意）
-            <textarea
-              value={commentBody}
-              onChange={(e) => setCommentBody(e.target.value)}
-              maxLength={5000}
-              placeholder="同じ保存で課題の変更と一緒に投稿できます"
+          <div className="detail-board stack">
+            <div className="section-head">
+              <h3 style={{ margin: 0, fontSize: "1.05rem" }}>変更履歴</h3>
+              <span className="muted">{timeline.length} 件</span>
+            </div>
+            <TaskDetailTimeline
+              entries={timeline}
+              comments={comments}
+              currentUserId={user?.id ?? null}
+              editingCommentId={editingCommentId}
+              editingBody={editingBody}
+              editBusy={editBusy}
+              onStartEdit={(c) => {
+                setEditingCommentId(c.id);
+                setEditingBody(c.body);
+              }}
+              onChangeEditingBody={setEditingBody}
+              onSaveEdit={onSaveCommentEdit}
+              onCancelEdit={() => {
+                setEditingCommentId(null);
+                setEditingBody("");
+              }}
             />
-          </label>
-
-          {error ? <p className="error">{error}</p> : null}
-
-          <div className="row">
-            <button className="btn btn-primary" type="submit" disabled={busy}>
-              保存
-            </button>
-            <button className="btn btn-danger" type="button" onClick={onDelete}>
-              削除
-            </button>
+            <label className="field comment-form detail-board-reply">
+              コメントを追加（任意）
+              <textarea
+                value={commentBody}
+                onChange={(e) => setCommentBody(e.target.value)}
+                maxLength={5000}
+                placeholder="同じ保存で課題の変更と一緒に投稿できます"
+              />
+            </label>
+            {error ? <p className="error">{error}</p> : null}
+            <div className="row">
+              <button className="btn btn-primary" type="submit" disabled={busy}>
+                保存
+              </button>
+              <button className="btn btn-danger" type="button" onClick={onDelete}>
+                削除
+              </button>
+            </div>
           </div>
         </form>
-      </section>
-
-      <section className="panel stack" style={{ marginTop: "1rem" }}>
-        <div className="section-head">
-          <h3 style={{ margin: 0, fontSize: "1.05rem" }}>変更履歴</h3>
-          <span className="muted">{timeline.length} 件</span>
-        </div>
-        <TaskDetailTimeline
-          entries={timeline}
-          comments={comments}
-          currentUserId={user?.id ?? null}
-          editingCommentId={editingCommentId}
-          editingBody={editingBody}
-          editBusy={editBusy}
-          onStartEdit={(c) => {
-            setEditingCommentId(c.id);
-            setEditingBody(c.body);
-          }}
-          onChangeEditingBody={setEditingBody}
-          onSaveEdit={onSaveCommentEdit}
-          onCancelEdit={() => {
-            setEditingCommentId(null);
-            setEditingBody("");
-          }}
-        />
       </section>
 
       <section className="panel stack" style={{ marginTop: "1rem" }}>
