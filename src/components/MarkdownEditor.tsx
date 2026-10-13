@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import MarkdownView from "@/components/MarkdownView";
 import { imageMarkdown, isRasterImageFile } from "@/lib/markdown";
 import {
@@ -44,18 +44,73 @@ type Tool =
   | "codeblock"
   | "table";
 
-const TOOLS: { id: Tool; label: string; title: string }[] = [
-  { id: "bold", label: "太字", title: "太字" },
-  { id: "italic", label: "斜体", title: "斜体" },
-  { id: "strike", label: "取消", title: "取り消し線" },
-  { id: "link", label: "リンク", title: "リンク" },
-  { id: "quote", label: "引用", title: "引用" },
-  { id: "ul", label: "箇条書き", title: "箇条書き" },
-  { id: "ol", label: "番号", title: "番号付きリスト" },
-  { id: "task", label: "チェック", title: "チェックリスト（- [ ] / - [x]）" },
-  { id: "code", label: "コード", title: "インラインコード" },
-  { id: "codeblock", label: "コードブロック", title: "コードブロック" },
-  { id: "table", label: "表", title: "表" },
+function ToolIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg className="md-tool-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      {children}
+    </svg>
+  );
+}
+
+function LinkMark() {
+  return (
+    <ToolIcon>
+      <path
+        d="M6.7 9.3a2.6 2.6 0 0 0 3.7.1l1.6-1.6a2.6 2.6 0 0 0-3.7-3.7L7.4 5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.3 6.7a2.6 2.6 0 0 0-3.7-.1L4 8.2a2.6 2.6 0 0 0 3.7 3.7l.9-.9"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </ToolIcon>
+  );
+}
+
+function TableMark() {
+  return (
+    <ToolIcon>
+      <rect x="1.6" y="2.2" width="12.8" height="11.6" rx="1" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M1.6 6.2h12.8M1.6 10h12.8M6.4 2.2v11.6M10.2 2.2v11.6" fill="none" stroke="currentColor" strokeWidth="1.2" />
+    </ToolIcon>
+  );
+}
+
+function ImageMark() {
+  return (
+    <ToolIcon>
+      <rect x="1.6" y="2.4" width="12.8" height="11.2" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="5.2" cy="6" r="1.15" fill="currentColor" />
+      <path
+        d="M2.4 12.2 5.8 8.6l2.2 2 2.1-2.4 3.1 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </ToolIcon>
+  );
+}
+
+const TOOLS: { id: Tool; face: ReactNode; title: string; className?: string }[] = [
+  { id: "bold", face: "B", title: "太字", className: "md-tool-bold" },
+  { id: "italic", face: "I", title: "斜体", className: "md-tool-italic" },
+  { id: "strike", face: "S", title: "取り消し線", className: "md-tool-strike" },
+  { id: "link", face: <LinkMark />, title: "リンク" },
+  { id: "quote", face: "“", title: "引用" },
+  { id: "ul", face: "•", title: "箇条書き" },
+  { id: "ol", face: "1.", title: "番号" },
+  { id: "task", face: "☑", title: "チェック" },
+  { id: "code", face: "</>", title: "インラインコード" },
+  { id: "codeblock", face: "{ }", title: "コードブロック" },
+  { id: "table", face: <TableMark />, title: "表" },
 ];
 
 function applyTool(tool: Tool, value: string, start: number, end: number): EditResult {
@@ -163,27 +218,24 @@ export default function MarkdownEditor({
           <button
             key={tool.id}
             type="button"
-            className="md-tool"
+            className={["md-tool", tool.className].filter(Boolean).join(" ")}
             title={tool.title}
             aria-label={tool.title}
             onClick={() => onTool(tool.id)}
           >
-            {tool.label}
+            {tool.face}
           </button>
         ))}
         <button
           type="button"
           className="md-tool"
-          title={
-            imageUpload
-              ? "画像をアップロードして本文に挿入します。添付にも残ります"
-              : "課題を保存してから画像を挿入できます"
-          }
+          title="画像"
           aria-label="画像"
+          aria-busy={uploading || undefined}
           disabled={!imageUpload || uploading}
           onClick={() => fileRef.current?.click()}
         >
-          {uploading ? "アップロード中" : "画像"}
+          <ImageMark />
         </button>
         <input
           ref={fileRef}
