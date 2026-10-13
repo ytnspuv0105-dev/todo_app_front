@@ -20,6 +20,7 @@ import {
   updateTask,
   uploadAttachment,
 } from "@/lib/api";
+import MarkdownEditor from "@/components/MarkdownEditor";
 import TaskDetailTimeline from "@/components/TaskDetailTimeline";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
@@ -238,7 +239,7 @@ export default function TaskDetailPage() {
   }
 
   async function onUpload(file: File | null) {
-    if (!token || !file) return;
+    if (!token || !file) return null;
     setError(null);
     try {
       const att = await uploadAttachment(token, workspaceId, taskId, file);
@@ -246,8 +247,10 @@ export default function TaskDetailPage() {
         prev ? { ...prev, attachments: [...prev.attachments, att] } : prev,
       );
       await refreshTimeline();
+      return att;
     } catch (err) {
       setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+      return null;
     }
   }
 
@@ -355,13 +358,16 @@ export default function TaskDetailPage() {
             />
           </label>
 
-          <label className="field">
-            詳細
-            <textarea
-              value={description}
-              onChange={(e) => beginEdit(setDescription)(e.target.value)}
-            />
-          </label>
+          <MarkdownEditor
+            label="詳細"
+            value={description}
+            onChange={beginEdit(setDescription)}
+            token={token}
+            workspaceId={workspaceId}
+            preview
+            imageUpload={onUpload}
+            onError={setError}
+          />
 
           <div className="grid-2">
             <label className="field">
@@ -474,6 +480,10 @@ export default function TaskDetailPage() {
               editingCommentId={editingCommentId}
               editingBody={editingBody}
               editBusy={editBusy}
+              token={token}
+              workspaceId={workspaceId}
+              onUploadImage={onUpload}
+              onError={setError}
               onStartEdit={(c) => {
                 setEditingCommentId(c.id);
                 setEditingBody(c.body);
@@ -485,15 +495,18 @@ export default function TaskDetailPage() {
                 setEditingBody("");
               }}
             />
-            <label className="field comment-form detail-board-reply">
-              コメントを追加（任意）
-              <textarea
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                maxLength={5000}
-                placeholder="同じ保存で課題の変更と一緒に投稿できます"
-              />
-            </label>
+            <MarkdownEditor
+              className="comment-form detail-board-reply"
+              label="コメントを追加（任意）"
+              value={commentBody}
+              onChange={setCommentBody}
+              token={token}
+              workspaceId={workspaceId}
+              maxLength={5000}
+              placeholder="同じ保存で課題の変更と一緒に投稿できます"
+              imageUpload={onUpload}
+              onError={setError}
+            />
             {error ? <p className="error">{error}</p> : null}
             <div className="row">
               <button className="btn btn-primary" type="submit" disabled={busy}>

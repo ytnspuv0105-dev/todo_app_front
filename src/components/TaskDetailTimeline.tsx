@@ -1,5 +1,7 @@
 "use client";
 
+import MarkdownEditor from "@/components/MarkdownEditor";
+import MarkdownView from "@/components/MarkdownView";
 import { TaskChangeHistory, TaskChangeItem, TaskComment } from "@/lib/api";
 import { formatUpdatedAt } from "@/lib/taskDisplay";
 
@@ -16,6 +18,10 @@ type Props = {
   onChangeEditingBody: (value: string) => void;
   onSaveEdit: (commentId: number) => void;
   onCancelEdit: () => void;
+  token: string | null;
+  workspaceId: number;
+  onUploadImage: (file: File) => Promise<{ id: number; filename: string } | null>;
+  onError: (message: string) => void;
 };
 
 function isEmptyBefore(before: string | null | undefined): boolean {
@@ -55,6 +61,10 @@ export default function TaskDetailTimeline({
   onChangeEditingBody,
   onSaveEdit,
   onCancelEdit,
+  token,
+  workspaceId,
+  onUploadImage,
+  onError,
 }: Props) {
   if (entries.length === 0) {
     return <p className="empty">まだ履歴はありません</p>;
@@ -114,11 +124,17 @@ export default function TaskDetailTimeline({
             {isNewComment ? (
               editing ? (
                 <div className="stack comment-form">
-                  <textarea
+                  <MarkdownEditor
+                    label="コメント"
+                    labelHidden
                     value={editingBody}
-                    onChange={(e) => onChangeEditingBody(e.target.value)}
+                    onChange={onChangeEditingBody}
+                    token={token}
+                    workspaceId={workspaceId}
                     maxLength={5000}
                     required
+                    imageUpload={onUploadImage}
+                    onError={onError}
                   />
                   <div className="row">
                     <button
@@ -140,7 +156,11 @@ export default function TaskDetailTimeline({
                   </div>
                 </div>
               ) : (
-                <p className="comment-body">{commentChange!.after}</p>
+                <MarkdownView
+                  source={commentChange!.after ?? ""}
+                  token={token}
+                  workspaceId={workspaceId}
+                />
               )
             ) : null}
 
