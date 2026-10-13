@@ -1331,6 +1331,7 @@ a.task-number:hover {
 .md-toolbar {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.35rem;
   max-width: 100%;
 }
@@ -1354,7 +1355,13 @@ a.task-number:hover {
 .md-tool-bold { font-weight: 700; }
 .md-tool-italic { font-style: italic; font-family: Georgia, "Times New Roman", serif; }
 .md-tool-strike { text-decoration: line-through; }
-.md-tool-check { font-size: 1.35rem; }
+.md-tool-check {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  font-size: 1.85rem;
+}
 
 .md-tool-icon { display: block; }
 
@@ -1435,9 +1442,7 @@ a.task-number:hover {
 }
 
 .md-body input[type="checkbox"] {
-  width: 1.2rem;
-  height: 1.2rem;
-  margin: 0 0.45rem 0.05rem 0;
+  margin: 0 0.4rem 0 0;
   accent-color: var(--accent);
   pointer-events: none;
   vertical-align: middle;
