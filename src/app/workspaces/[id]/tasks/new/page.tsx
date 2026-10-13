@@ -10,6 +10,7 @@ import {
   listMembers,
   listTasks,
 } from "@/lib/api";
+import MarkdownEditor from "@/components/MarkdownEditor";
 import { useAuth } from "@/lib/auth";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
 import { formatTaskNumber } from "@/lib/taskDisplay";
@@ -147,10 +148,15 @@ export default function TaskCreatePage() {
             />
           </label>
 
-          <label className="field">
-            詳細
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-          </label>
+          <MarkdownEditor
+            label="詳細"
+            value={description}
+            onChange={setDescription}
+            token={token}
+            workspaceId={workspaceId}
+            preview
+            onError={setError}
+          />
 
           <div className="grid-2">
             <label className="field">

@@ -1,3 +1,5 @@
+import { RASTER_IMAGE_TYPES } from "@/lib/markdown";
+
 export type User = {
   id: number;
   email: string;
@@ -385,4 +387,27 @@ export async function downloadAttachment(
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export async function fetchAttachmentImageUrl(
+  token: string,
+  workspaceId: number,
+  attachmentId: number,
+): Promise<string> {
+  const res = await fetch(
+    `${getBaseUrl()}/workspaces/${workspaceId}/attachments/${attachmentId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw new ApiError(res.status, "画像の取得に失敗しました");
+  }
+  const blob = await res.blob();
+  const type = (blob.type || "").split(";")[0].trim().toLowerCase();
+  if (!RASTER_IMAGE_TYPES.has(type)) {
+    throw new ApiError(415, "画像として表示できないファイルです");
+  }
+  return URL.createObjectURL(blob);
 }
