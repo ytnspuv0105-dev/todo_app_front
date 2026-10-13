@@ -1356,11 +1356,10 @@ a.task-number:hover {
 .md-tool-italic { font-style: italic; font-family: Georgia, "Times New Roman", serif; }
 .md-tool-strike { text-decoration: line-through; }
 .md-tool-check {
-  width: 2.5rem;
-  min-width: 2.5rem;
-  height: 2.5rem;
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
   padding: 0;
-  font-size: 1.85rem;
 }
 
 .md-tool-icon { display: block; }

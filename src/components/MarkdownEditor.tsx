@@ -123,6 +123,31 @@ function NumberListMark() {
   );
 }
 
+function CheckMark() {
+  return (
+    <svg className="md-tool-icon" viewBox="0 0 16 16" width="26" height="26" aria-hidden="true">
+      <rect
+        x="1.1"
+        y="1.1"
+        width="13.8"
+        height="13.8"
+        rx="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M3.8 8.1 6.6 11.1 12.2 4.8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ImageMark() {
   return (
     <ToolIcon>
@@ -148,7 +173,7 @@ const TOOLS: { id: Tool; face: ReactNode; title: string; className?: string }[] 
   { id: "quote", face: "“", title: "引用" },
   { id: "ul", face: <BulletListMark />, title: "箇条書き" },
   { id: "ol", face: <NumberListMark />, title: "番号" },
-  { id: "task", face: "☑", title: "チェック", className: "md-tool-check" },
+  { id: "task", face: <CheckMark />, title: "チェック", className: "md-tool-check" },
   { id: "code", face: "</>", title: "インラインコード" },
   { id: "codeblock", face: "{ }", title: "コードブロック" },
   { id: "table", face: <TableMark />, title: "表" },
