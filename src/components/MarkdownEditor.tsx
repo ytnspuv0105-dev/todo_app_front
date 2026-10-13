@@ -125,7 +125,7 @@ function NumberListMark() {
 
 function CheckMark() {
   return (
-    <svg className="md-tool-icon" viewBox="0 0 16 16" width="26" height="26" aria-hidden="true">
+    <svg className="md-tool-icon" viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
       <rect
         x="1.1"
         y="1.1"
