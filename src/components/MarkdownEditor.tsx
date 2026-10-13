@@ -148,7 +148,7 @@ const TOOLS: { id: Tool; face: ReactNode; title: string; className?: string }[] 
   { id: "quote", face: "“", title: "引用" },
   { id: "ul", face: <BulletListMark />, title: "箇条書き" },
   { id: "ol", face: <NumberListMark />, title: "番号" },
-  { id: "task", face: "☑", title: "チェック" },
+  { id: "task", face: "☑", title: "チェック", className: "md-tool-check" },
   { id: "code", face: "</>", title: "インラインコード" },
   { id: "codeblock", face: "{ }", title: "コードブロック" },
   { id: "table", face: <TableMark />, title: "表" },
