@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import AssigneeGantt from "@/components/AssigneeGantt";
 import { Task, listTasks } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { isClosedStatus } from "@/lib/dueSoon";
 
 export default function WorkspaceGanttPage() {
   const params = useParams();
@@ -34,6 +35,11 @@ export default function WorkspaceGanttPage() {
     };
   }, [token, workspaceId]);
 
+  const chartTasks = useMemo(
+    () => tasks.filter((t) => !isClosedStatus(t.status)),
+    [tasks],
+  );
+
   return (
     <>
       <h2 className="hero-title" style={{ fontSize: "1.7rem" }}>
@@ -49,7 +55,7 @@ export default function WorkspaceGanttPage() {
           <AssigneeGantt
             workspaceId={workspaceId}
             token={token}
-            tasks={tasks}
+            tasks={chartTasks}
             onTaskUpdated={(updated) => {
               setTasks((prev) =>
                 prev.map((t) => (t.id === updated.id ? updated : t)),
