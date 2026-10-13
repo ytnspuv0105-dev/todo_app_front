@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, Shippori_Mincho } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
+import RegisterServiceWorker from "@/components/RegisterServiceWorker";
 import "./globals.css";
 
 const sans = Noto_Sans_JP({
@@ -20,6 +21,21 @@ const display = Shippori_Mincho({
 export const metadata: Metadata = {
   title: "Todo管理",
   description: "チームで課題を管理するアプリ",
+  applicationName: "Todo管理",
+  appleWebApp: {
+    capable: true,
+    title: "Todo管理",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192" }],
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#2c6a4f",
 };
 
 export default function RootLayout({
@@ -28,6 +44,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`${sans.variable} ${display.variable}`}>
+        <RegisterServiceWorker />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
