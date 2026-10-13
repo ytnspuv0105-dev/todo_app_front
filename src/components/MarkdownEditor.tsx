@@ -82,6 +82,47 @@ function TableMark() {
   );
 }
 
+function BulletListMark() {
+  return (
+    <svg className="md-tool-icon md-list-icon" viewBox="0 0 18 16" width="22" height="20" aria-hidden="true">
+      <circle cx="2.1" cy="3.1" r="1.15" fill="currentColor" />
+      <circle cx="2.1" cy="8" r="1.15" fill="currentColor" />
+      <circle cx="2.1" cy="12.9" r="1.15" fill="currentColor" />
+      <path
+        d="M5.2 3.1H16.4M5.2 8H16.4M5.2 12.9H16.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function NumberListMark() {
+  return (
+    <svg className="md-tool-icon md-list-icon" viewBox="0 0 18 16" width="22" height="20" aria-hidden="true">
+      <g
+        fill="currentColor"
+        fontSize="5.2"
+        fontWeight="700"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+      >
+        <text x="0.2" y="4.7">1</text>
+        <text x="0.2" y="9.6">2</text>
+        <text x="0.2" y="14.5">3</text>
+      </g>
+      <path
+        d="M5.6 3.1H16.6M5.6 8H16.6M5.6 12.9H16.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function ImageMark() {
   return (
     <ToolIcon>
@@ -105,8 +146,8 @@ const TOOLS: { id: Tool; face: ReactNode; title: string; className?: string }[] 
   { id: "strike", face: "S", title: "取り消し線", className: "md-tool-strike" },
   { id: "link", face: <LinkMark />, title: "リンク" },
   { id: "quote", face: "“", title: "引用" },
-  { id: "ul", face: "•", title: "箇条書き" },
-  { id: "ol", face: "1.", title: "番号" },
+  { id: "ul", face: <BulletListMark />, title: "箇条書き" },
+  { id: "ol", face: <NumberListMark />, title: "番号" },
   { id: "task", face: "☑", title: "チェック" },
   { id: "code", face: "</>", title: "インラインコード" },
   { id: "codeblock", face: "{ }", title: "コードブロック" },
