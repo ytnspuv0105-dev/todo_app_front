@@ -22,14 +22,6 @@ export const metadata: Metadata = {
   title: "Todo管理",
   description: "チームで課題を管理するアプリ",
   applicationName: "Todo管理",
-  appleWebApp: {
-    capable: true,
-    title: "Todo管理",
-    statusBarStyle: "default",
-  },
-  icons: {
-    apple: [{ url: "/icons/icon-192.png", sizes: "192x192" }],
-  },
 };
 
 export const viewport: Viewport = {
@@ -43,6 +35,15 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ja">
+      <head>
+        {/* Chrome reads this from head when offering installation. */}
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Todo管理" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" sizes="192x192" />
+      </head>
       <body className={`${sans.variable} ${display.variable}`}>
         <RegisterServiceWorker />
         <AuthProvider>{children}</AuthProvider>
