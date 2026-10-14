@@ -20,6 +20,7 @@ import {
   localToday,
   parseDateOnly,
 } from "@/lib/gantt";
+import { isJapaneseHoliday, weekdayLabel } from "@/lib/jpHoliday";
 import { formatTaskNumber } from "@/lib/taskDisplay";
 
 type Props = {
@@ -445,15 +446,26 @@ export default function AssigneeGantt({
             {days.map((d) => {
               const key = formatDateOnly(d);
               const isToday = key === todayKey;
+              const dow = weekdayLabel(d);
+              const holiday = isJapaneseHoliday(d);
+              const tone = holiday
+                ? " is-holiday"
+                : d.getDay() === 0
+                  ? " is-sunday"
+                  : d.getDay() === 6
+                    ? " is-saturday"
+                    : "";
               return (
                 <div
                   key={key}
-                  className={`gantt-tick${d.getDate() === 1 ? " is-month" : ""}${isToday ? " is-today" : ""}`}
+                  className={`gantt-tick${d.getDate() === 1 ? " is-month" : ""}${isToday ? " is-today" : ""}${tone}`}
                   style={{ width: DAY_PX }}
-                  title={isToday ? `${key}（今日）` : key}
+                  title={isToday ? `${key}（${dow}・今日）` : `${key}（${dow}）`}
                   data-gantt-today={isToday ? "true" : undefined}
+                  data-gantt-holiday={holiday ? "true" : undefined}
                 >
-                  {formatTickLabel(d)}
+                  <span className="gantt-tick-date">{formatTickLabel(d)}</span>
+                  <span className="gantt-tick-weekday">{dow}</span>
                 </div>
               );
             })}
