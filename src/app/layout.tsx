@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, Shippori_Mincho } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
+import RegisterServiceWorker from "@/components/RegisterServiceWorker";
 import "./globals.css";
 
 const sans = Noto_Sans_JP({
@@ -20,6 +21,13 @@ const display = Shippori_Mincho({
 export const metadata: Metadata = {
   title: "Todo管理",
   description: "チームで課題を管理するアプリ",
+  applicationName: "Todo管理",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#2c6a4f",
 };
 
 export default function RootLayout({
@@ -27,7 +35,17 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ja">
+      <head>
+        {/* Chrome reads this from head when offering installation. */}
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Todo管理" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" sizes="192x192" />
+      </head>
       <body className={`${sans.variable} ${display.variable}`}>
+        <RegisterServiceWorker />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
