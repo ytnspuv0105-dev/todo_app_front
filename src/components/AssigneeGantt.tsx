@@ -20,6 +20,7 @@ import {
   localToday,
   parseDateOnly,
 } from "@/lib/gantt";
+import { isJapaneseHoliday, weekdayLabel } from "@/lib/jpHoliday";
 import { formatTaskNumber } from "@/lib/taskDisplay";
 
 type Props = {
@@ -81,6 +82,32 @@ function TodayColumn({ index }: { index: number }) {
       aria-hidden
     />
   );
+}
+
+function isOffday(d: Date): boolean {
+  return d.getDay() === 0 || d.getDay() === 6 || isJapaneseHoliday(d);
+}
+
+/** Light-gray columns for Saturday, Sunday, and holidays. Today is omitted. */
+function OffdayColumns({
+  days,
+  todayKey,
+}: {
+  days: Date[];
+  todayKey: string;
+}) {
+  return days.map((d, index) => {
+    const key = formatDateOnly(d);
+    if (key === todayKey || !isOffday(d)) return null;
+    return (
+      <div
+        key={key}
+        className="gantt-offday-col"
+        style={{ left: index * DAY_PX, width: DAY_PX }}
+        aria-hidden
+      />
+    );
+  });
 }
 
 function shiftInclusiveBar(
@@ -445,15 +472,26 @@ export default function AssigneeGantt({
             {days.map((d) => {
               const key = formatDateOnly(d);
               const isToday = key === todayKey;
+              const dow = weekdayLabel(d);
+              const holiday = isJapaneseHoliday(d);
+              const tone = holiday
+                ? " is-holiday"
+                : d.getDay() === 0
+                  ? " is-sunday"
+                  : d.getDay() === 6
+                    ? " is-saturday"
+                    : "";
               return (
                 <div
                   key={key}
-                  className={`gantt-tick${d.getDate() === 1 ? " is-month" : ""}${isToday ? " is-today" : ""}`}
+                  className={`gantt-tick${d.getDate() === 1 ? " is-month" : ""}${isToday ? " is-today" : ""}${tone}`}
                   style={{ width: DAY_PX }}
-                  title={isToday ? `${key}（今日）` : key}
+                  title={isToday ? `${key}（${dow}・今日）` : `${key}（${dow}）`}
                   data-gantt-today={isToday ? "true" : undefined}
+                  data-gantt-holiday={holiday ? "true" : undefined}
                 >
-                  {formatTickLabel(d)}
+                  <span className="gantt-tick-date">{formatTickLabel(d)}</span>
+                  <span className="gantt-tick-weekday">{dow}</span>
                 </div>
               );
             })}
@@ -467,6 +505,7 @@ export default function AssigneeGantt({
                 style={{ width: timelineWidth }}
                 aria-hidden
               >
+                <OffdayColumns days={days} todayKey={todayKey} />
                 <TodayColumn index={todayIndex} />
               </div>
 
@@ -492,6 +531,7 @@ export default function AssigneeGantt({
                     </Link>
                     <div className="gantt-track" style={{ width: timelineWidth }}>
                       <div className="gantt-day-lines" aria-hidden />
+                      <OffdayColumns days={days} todayKey={todayKey} />
                       <TodayColumn index={todayIndex} />
                       <div
                         className={`gantt-bar${busy ? " is-saving" : ""}`}

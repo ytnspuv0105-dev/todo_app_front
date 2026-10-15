@@ -935,6 +935,8 @@ a.task-number:hover {
   position: sticky;
   left: 0;
   z-index: 3;
+  display: flex;
+  align-items: center;
   padding: 0.55rem 0.75rem;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -955,12 +957,25 @@ a.task-number:hover {
 
 .gantt-tick {
   flex: 0 0 auto;
-  padding: 0.55rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.02rem;
+  padding: 0.28rem 0;
   text-align: center;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
+  line-height: 1.15;
   border-right: 1px solid rgba(26, 38, 32, 0.06);
+}
+
+.gantt-tick-date,
+.gantt-tick-weekday {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
 .gantt-group,
@@ -1042,13 +1057,29 @@ a.task-number:hover {
   pointer-events: none;
 }
 
+.gantt-offday-col,
 .gantt-today-col {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: rgba(44, 106, 79, 0.12);
   pointer-events: none;
   z-index: 0;
+}
+
+.gantt-offday-col {
+  /* Cover the row border, then repaint it over the gray so it stays visible. */
+  bottom: -1px;
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--ink) 12%, #d5dae0),
+      color-mix(in srgb, var(--ink) 12%, #d5dae0)
+    )
+      left bottom / 100% 1px no-repeat,
+    #d5dae0;
+}
+
+.gantt-today-col {
+  background: rgba(44, 106, 79, 0.12);
 }
 
 .gantt-bar {
@@ -1114,11 +1145,46 @@ a.task-number:hover {
   font-weight: 700;
 }
 
+.gantt-tick.is-saturday,
+.gantt-tick.is-sunday,
+.gantt-tick.is-holiday {
+  position: relative;
+  background: #d5dae0;
+}
+
+.gantt-tick.is-saturday::after,
+.gantt-tick.is-sunday::after,
+.gantt-tick.is-holiday::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 12%, #d5dae0);
+  pointer-events: none;
+}
+
+.gantt-tick.is-today.is-saturday::after,
+.gantt-tick.is-today.is-sunday::after,
+.gantt-tick.is-today.is-holiday::after {
+  content: none;
+}
+
 .gantt-tick.is-today {
   color: var(--accent-2);
   font-weight: 700;
   background: rgba(44, 106, 79, 0.18);
   box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.gantt-tick.is-saturday {
+  color: #1a5cb8;
+}
+
+.gantt-tick.is-sunday,
+.gantt-tick.is-holiday {
+  color: #d0272d;
 }
 
 @media (max-width: 720px) {
