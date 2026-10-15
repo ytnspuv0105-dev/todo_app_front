@@ -1067,7 +1067,15 @@ a.task-number:hover {
 }
 
 .gantt-offday-col {
-  background: #d5dae0;
+  /* Cover the row border, then repaint it over the gray so it stays visible. */
+  bottom: -1px;
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--ink) 12%, #d5dae0),
+      color-mix(in srgb, var(--ink) 12%, #d5dae0)
+    )
+      left bottom / 100% 1px no-repeat,
+    #d5dae0;
 }
 
 .gantt-today-col {
@@ -1140,7 +1148,27 @@ a.task-number:hover {
 .gantt-tick.is-saturday,
 .gantt-tick.is-sunday,
 .gantt-tick.is-holiday {
+  position: relative;
   background: #d5dae0;
+}
+
+.gantt-tick.is-saturday::after,
+.gantt-tick.is-sunday::after,
+.gantt-tick.is-holiday::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: color-mix(in srgb, var(--ink) 12%, #d5dae0);
+  pointer-events: none;
+}
+
+.gantt-tick.is-today.is-saturday::after,
+.gantt-tick.is-today.is-sunday::after,
+.gantt-tick.is-today.is-holiday::after {
+  content: none;
 }
 
 .gantt-tick.is-today {
