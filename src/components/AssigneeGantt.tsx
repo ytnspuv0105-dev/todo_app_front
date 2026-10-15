@@ -84,6 +84,32 @@ function TodayColumn({ index }: { index: number }) {
   );
 }
 
+function isOffday(d: Date): boolean {
+  return d.getDay() === 0 || d.getDay() === 6 || isJapaneseHoliday(d);
+}
+
+/** Light-gray columns for Saturday, Sunday, and holidays. Today is omitted. */
+function OffdayColumns({
+  days,
+  todayKey,
+}: {
+  days: Date[];
+  todayKey: string;
+}) {
+  return days.map((d, index) => {
+    const key = formatDateOnly(d);
+    if (key === todayKey || !isOffday(d)) return null;
+    return (
+      <div
+        key={key}
+        className="gantt-offday-col"
+        style={{ left: index * DAY_PX, width: DAY_PX }}
+        aria-hidden
+      />
+    );
+  });
+}
+
 function shiftInclusiveBar(
   originStart: string,
   originDue: string,
@@ -479,6 +505,7 @@ export default function AssigneeGantt({
                 style={{ width: timelineWidth }}
                 aria-hidden
               >
+                <OffdayColumns days={days} todayKey={todayKey} />
                 <TodayColumn index={todayIndex} />
               </div>
 
@@ -504,6 +531,7 @@ export default function AssigneeGantt({
                     </Link>
                     <div className="gantt-track" style={{ width: timelineWidth }}>
                       <div className="gantt-day-lines" aria-hidden />
+                      <OffdayColumns days={days} todayKey={todayKey} />
                       <TodayColumn index={todayIndex} />
                       <div
                         className={`gantt-bar${busy ? " is-saving" : ""}`}

@@ -1057,13 +1057,21 @@ a.task-number:hover {
   pointer-events: none;
 }
 
+.gantt-offday-col,
 .gantt-today-col {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: rgba(44, 106, 79, 0.12);
   pointer-events: none;
   z-index: 0;
+}
+
+.gantt-offday-col {
+  background: #d5dae0;
+}
+
+.gantt-today-col {
+  background: rgba(44, 106, 79, 0.12);
 }
 
 .gantt-bar {
@@ -1127,6 +1135,12 @@ a.task-number:hover {
 .gantt-tick.is-month {
   color: var(--ink);
   font-weight: 700;
+}
+
+.gantt-tick.is-saturday,
+.gantt-tick.is-sunday,
+.gantt-tick.is-holiday {
+  background: #d5dae0;
 }
 
 .gantt-tick.is-today {
