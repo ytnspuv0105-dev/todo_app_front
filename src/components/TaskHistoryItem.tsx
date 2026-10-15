@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HistoryCreateFields from "@/components/HistoryCreateFields";
 import { TaskChangeHistory, TaskChangeItem } from "@/lib/api";
 import { formatTaskNumber, formatUpdatedAt } from "@/lib/taskDisplay";
 
@@ -61,7 +62,10 @@ export default function TaskHistoryItem({ entry, workspaceId }: Props) {
         </span>
       </div>
       {entry.kind === "create" ? (
-        <p className="history-create-label">作成</p>
+        <div className="history-body">
+          <p className="history-create-label">作成</p>
+          <HistoryCreateFields changes={entry.changes} />
+        </div>
       ) : (
         <div className="history-body">
           {isCommentEdit ? (

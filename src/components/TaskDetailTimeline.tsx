@@ -1,5 +1,6 @@
 "use client";
 
+import HistoryCreateFields from "@/components/HistoryCreateFields";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import MarkdownView from "@/components/MarkdownView";
 import { TaskChangeHistory, TaskChangeItem, TaskComment } from "@/lib/api";
@@ -106,7 +107,10 @@ export default function TaskDetailTimeline({
             </div>
 
             {entry.kind === "create" ? (
-              <p className="history-create-label">作成</p>
+              <div className="history-body">
+                <p className="history-create-label">作成</p>
+                <HistoryCreateFields changes={entry.changes} />
+              </div>
             ) : null}
 
             {isCommentEdit ? (
@@ -164,7 +168,7 @@ export default function TaskDetailTimeline({
               )
             ) : null}
 
-            {!isCommentEdit && fieldChanges.length > 0 ? (
+            {entry.kind !== "create" && !isCommentEdit && fieldChanges.length > 0 ? (
               <ul className="history-changes">
                 {fieldChanges.map((c, i) => (
                   <FieldDiff key={`${c.label}-${i}`} change={c} />

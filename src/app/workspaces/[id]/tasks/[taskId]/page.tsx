@@ -23,6 +23,15 @@ import {
 import MarkdownEditor from "@/components/MarkdownEditor";
 import TaskDetailTimeline from "@/components/TaskDetailTimeline";
 import { useAuth } from "@/lib/auth";
+import {
+  clearCreateNoticeFor,
+  createNoticeKey,
+  isCreateNoticeMounted,
+  markCreateNoticeMounted,
+  markCreateNoticeUnmounted,
+  peekCreateNotice,
+  stripCreatedQuery,
+} from "@/lib/createNotice";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
 import { rememberedListHref } from "@/lib/listFilters";
 import { formatTaskNumber } from "@/lib/taskDisplay";
@@ -49,9 +58,16 @@ export default function TaskDetailPage() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const saveNoticeRef = useRef<HTMLParagraphElement | null>(null);
+  const shownCreateKey = useRef<string | null>(null);
+  const createNoticeDismissed = useRef(false);
+
+  function stripCreateFlag() {
+    clearCreateNoticeFor(workspaceId, taskId);
+    stripCreatedQuery();
+  }
 
   useEffect(() => {
-    if (!saveNotice) return;
+    if (!saveNotice || loading) return;
     const el = saveNoticeRef.current;
     if (!el) return;
 
@@ -78,7 +94,40 @@ export default function TaskDetailPage() {
     for (const target of targets) {
       target.scrollTo({ top: 0, left: 0, behavior: "smooth" });
     }
-  }, [saveNotice]);
+  }, [saveNotice, loading]);
+
+  useEffect(() => {
+    const key = createNoticeKey(workspaceId, taskId);
+    markCreateNoticeMounted(key);
+    const fromQuery =
+      new URLSearchParams(window.location.search).get("created") === "1";
+    const fromStore = peekCreateNotice(workspaceId, taskId);
+    const isNewTask = shownCreateKey.current !== key;
+    if (isNewTask) {
+      createNoticeDismissed.current = false;
+      shownCreateKey.current = null;
+    }
+
+    let consumeTimer: number | undefined;
+    if (!createNoticeDismissed.current && (fromQuery || fromStore)) {
+      shownCreateKey.current = key;
+      setSaveNotice("作成しました");
+      consumeTimer = window.setTimeout(() => {
+        clearCreateNoticeFor(workspaceId, taskId);
+        stripCreatedQuery();
+      }, 0);
+    } else if (isNewTask) {
+      setSaveNotice(null);
+    }
+
+    return () => {
+      if (consumeTimer !== undefined) window.clearTimeout(consumeTimer);
+      markCreateNoticeUnmounted(key);
+      window.setTimeout(() => {
+        if (!isCreateNoticeMounted(key)) clearCreateNoticeFor(workspaceId, taskId);
+      }, 0);
+    };
+  }, [workspaceId, taskId]);
 
   const [issueType, setIssueType] = useState("task");
   const [title, setTitle] = useState("");
@@ -95,14 +144,12 @@ export default function TaskDetailPage() {
 
   function beginEdit<T>(setter: (value: T) => void) {
     return (value: T) => {
+      createNoticeDismissed.current = true;
       setSaveNotice(null);
+      stripCreateFlag();
       setter(value);
     };
   }
-
-  useEffect(() => {
-    setSaveNotice(null);
-  }, [workspaceId, taskId]);
 
   useEffect(() => {
     setListHref(rememberedListHref(workspaceId));
@@ -219,8 +266,12 @@ export default function TaskDetailPage() {
       setTask(updated);
       if (trimmedComment) setCommentBody("");
       await refreshTimeline();
+      createNoticeDismissed.current = true;
+      stripCreateFlag();
       setSaveNotice("更新しました");
     } catch (err) {
+      createNoticeDismissed.current = true;
+      stripCreateFlag();
       setSaveNotice(null);
       setError(err instanceof Error ? err.message : "保存に失敗しました");
     } finally {

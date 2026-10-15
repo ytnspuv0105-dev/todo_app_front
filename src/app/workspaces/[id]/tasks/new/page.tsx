@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import { useAuth } from "@/lib/auth";
+import { armCreateNotice } from "@/lib/createNotice";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
 import { formatTaskNumber } from "@/lib/taskDisplay";
 
@@ -92,7 +93,8 @@ export default function TaskCreatePage() {
         parent_number: parentNumber ? Number(parentNumber) : null,
         related_task_numbers: related,
       });
-      router.push(`/workspaces/${workspaceId}/tasks/${task.id}`);
+      armCreateNotice(workspaceId, task.id);
+      router.push(`/workspaces/${workspaceId}/tasks/${task.id}?created=1`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "作成に失敗しました");
       setBusy(false);
