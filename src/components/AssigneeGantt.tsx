@@ -517,11 +517,20 @@ export default function AssigneeGantt({
                 const href = `/workspaces/${workspaceId}/tasks/${bar.task.id}`;
                 const dateTitle = `${label}（${formatDateOnly(bar.start)} ～ ${formatDateOnly(bar.end)}）`;
                 const busy = savingId === bar.task.id;
+                const indent = bar.indent;
                 return (
                   <div className="gantt-row" key={bar.task.id}>
                     <Link
                       href={href}
-                      className="gantt-task-label"
+                      className={
+                        indent > 0 ? "gantt-task-label is-child" : "gantt-task-label"
+                      }
+                      style={
+                        indent > 0
+                          ? ({ "--gantt-indent": indent } as CSSProperties)
+                          : undefined
+                      }
+                      data-gantt-indent={indent > 0 ? indent : undefined}
                       title={label}
                     >
                       <span className="gantt-task-number">

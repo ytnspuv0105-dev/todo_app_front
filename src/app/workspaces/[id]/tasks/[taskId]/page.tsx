@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Task,
@@ -35,6 +35,7 @@ import {
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
 import { rememberedListHref } from "@/lib/listFilters";
 import { formatTaskNumber } from "@/lib/taskDisplay";
+import { descendantNumbers } from "@/lib/taskTree";
 
 export default function TaskDetailPage() {
   const params = useParams();
@@ -141,6 +142,10 @@ export default function TaskDetailPage() {
   const [milestone, setMilestone] = useState("");
   const [parentNumber, setParentNumber] = useState("");
   const [relatedNumbers, setRelatedNumbers] = useState("");
+  const blockedParentNumbers = useMemo(
+    () => descendantNumbers(siblings, taskId),
+    [siblings, taskId],
+  );
 
   function beginEdit<T>(setter: (value: T) => void) {
     return (value: T) => {
@@ -496,11 +501,17 @@ export default function TaskDetailPage() {
                 onChange={(e) => beginEdit(setParentNumber)(e.target.value)}
               >
                 <option value="">なし</option>
-                {siblings.map((s) => (
-                  <option key={s.id} value={s.number}>
-                    {formatTaskNumber(s.number)} {s.title}
-                  </option>
-                ))}
+                {siblings
+                  .filter(
+                    (s) =>
+                      !blockedParentNumbers.has(s.number) ||
+                      String(s.number) === parentNumber,
+                  )
+                  .map((s) => (
+                    <option key={s.id} value={s.number}>
+                      {formatTaskNumber(s.number)} {s.title}
+                    </option>
+                  ))}
               </select>
             </label>
             <label className="field">

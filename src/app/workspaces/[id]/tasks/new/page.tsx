@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Task,
@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { armCreateNotice } from "@/lib/createNotice";
 import { ISSUE_TYPES, PRIORITIES, STATUSES } from "@/lib/labels";
 import { formatTaskNumber } from "@/lib/taskDisplay";
+import { ancestorNumbers } from "@/lib/taskTree";
 
 export default function TaskCreatePage() {
   const params = useParams();
@@ -39,7 +40,23 @@ export default function TaskCreatePage() {
   const [category, setCategory] = useState("");
   const [milestone, setMilestone] = useState("");
   const [parentNumber, setParentNumber] = useState("");
+  const [childNumbers, setChildNumbers] = useState<string[]>([]);
   const [relatedNumbers, setRelatedNumbers] = useState("");
+
+  const blockedChildNumbers = useMemo(
+    () => ancestorNumbers(siblings, parentNumber ? Number(parentNumber) : null),
+    [siblings, parentNumber],
+  );
+  const tasksByNumber = useMemo(
+    () => [...siblings].sort((a, b) => a.number - b.number),
+    [siblings],
+  );
+  const parentOptions = tasksByNumber.filter(
+    (task) => !childNumbers.includes(String(task.number)),
+  );
+  const childOptions = tasksByNumber.filter(
+    (task) => !blockedChildNumbers.has(task.number),
+  );
 
   useEffect(() => {
     if (!token || !workspaceId) return;
@@ -91,6 +108,9 @@ export default function TaskCreatePage() {
         category: category || null,
         milestone: milestone || null,
         parent_number: parentNumber ? Number(parentNumber) : null,
+        child_numbers: childNumbers
+          .map(Number)
+          .filter((n) => !Number.isNaN(n)),
         related_task_numbers: related,
       });
       armCreateNotice(workspaceId, task.id);
@@ -215,10 +235,20 @@ export default function TaskCreatePage() {
               親課題
               <select
                 value={parentNumber}
-                onChange={(e) => setParentNumber(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setParentNumber(next);
+                  const blocked = ancestorNumbers(
+                    siblings,
+                    next ? Number(next) : null,
+                  );
+                  setChildNumbers((prev) =>
+                    prev.filter((n) => !blocked.has(Number(n))),
+                  );
+                }}
               >
                 <option value="">なし</option>
-                {siblings.map((s) => (
+                {parentOptions.map((s) => (
                   <option key={s.id} value={s.number}>
                     {formatTaskNumber(s.number)} {s.title}
                   </option>
@@ -226,14 +256,43 @@ export default function TaskCreatePage() {
               </select>
             </label>
             <label className="field">
-              関連課題（番号をカンマ区切り）
-              <input
-                value={relatedNumbers}
-                onChange={(e) => setRelatedNumbers(e.target.value)}
-                placeholder="例: 1, 3"
-              />
+              子課題
+              <select
+                multiple
+                size={Math.min(8, Math.max(childOptions.length, 3))}
+                value={childNumbers}
+                onChange={(e) => {
+                  const next = Array.from(
+                    e.target.selectedOptions,
+                    (option) => option.value,
+                  );
+                  setChildNumbers(next);
+                  if (parentNumber && next.includes(parentNumber)) {
+                    setParentNumber("");
+                  }
+                }}
+                aria-describedby="child-tasks-hint"
+              >
+                {childOptions.map((s) => (
+                  <option key={s.id} value={s.number}>
+                    {formatTaskNumber(s.number)} {s.title}
+                  </option>
+                ))}
+              </select>
+              <span id="child-tasks-hint" className="field-hint">
+                複数選択できます。選んだ課題の親が、この課題になります。
+              </span>
             </label>
           </div>
+
+          <label className="field">
+            関連課題（番号をカンマ区切り）
+            <input
+              value={relatedNumbers}
+              onChange={(e) => setRelatedNumbers(e.target.value)}
+              placeholder="例: 1, 3"
+            />
+          </label>
 
           {error ? <p className="error">{error}</p> : null}
 
