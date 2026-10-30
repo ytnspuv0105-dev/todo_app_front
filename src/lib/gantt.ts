@@ -10,6 +10,11 @@ export type GanttBar = {
   hasStartDate: boolean;
   /** True when the task actually has 期限日 set (not inferred from 開始日 alone). */
   hasDueDate: boolean;
+  /**
+   * How many levels this row sits under a parent in the same assignee group.
+   * 0 when the parent is in another group, has no bar, or there is no parent.
+   */
+  indent: number;
 };
 
 export type GanttGroup = {
@@ -105,6 +110,53 @@ export function taskBarRange(task: Task): {
   };
 }
 
+function compareBars(a: GanttBar, b: GanttBar): number {
+  const byStart = a.startIndex - b.startIndex;
+  if (byStart !== 0) return byStart;
+  return a.task.number - b.task.number;
+}
+
+/**
+ * Keep assignee groups as they are. Inside a group, put each child on the
+ * row directly under its parent and record the indent. A parent that is not
+ * in this group leaves the child unindented, in start-date order with the roots.
+ */
+export function orderBarsWithParentIndent(bars: GanttBar[]): GanttBar[] {
+  const byId = new Map(bars.map((bar) => [bar.task.id, bar]));
+  const childIds = new Set<number>();
+  const childrenOf = new Map<number, GanttBar[]>();
+
+  for (const bar of bars) {
+    const parentId = bar.task.parent_id;
+    if (parentId == null || !byId.has(parentId)) continue;
+    childIds.add(bar.task.id);
+    const list = childrenOf.get(parentId) ?? [];
+    list.push(bar);
+    childrenOf.set(parentId, list);
+  }
+
+  for (const list of childrenOf.values()) list.sort(compareBars);
+
+  const roots = bars.filter((bar) => !childIds.has(bar.task.id)).sort(compareBars);
+  const ordered: GanttBar[] = [];
+  const seen = new Set<number>();
+
+  const visit = (bar: GanttBar, indent: number) => {
+    if (seen.has(bar.task.id)) return;
+    seen.add(bar.task.id);
+    ordered.push({ ...bar, indent });
+    for (const child of childrenOf.get(bar.task.id) ?? []) {
+      visit(child, indent + 1);
+    }
+  };
+
+  for (const root of roots) visit(root, 0);
+  for (const bar of bars) {
+    if (!seen.has(bar.task.id)) visit(bar, 0);
+  }
+  return ordered;
+}
+
 export function buildGanttModel(
   tasks: Task[],
   rangeLock?: { rangeStart: Date; rangeEnd: Date },
@@ -198,15 +250,12 @@ export function buildGanttModel(
       daySpan: dayDiff(item.start, item.end) + 1,
       hasStartDate: item.hasStartDate,
       hasDueDate: item.hasDueDate,
+      indent: 0,
     });
   }
 
   for (const group of groupsMap.values()) {
-    group.bars.sort((a, b) => {
-      const byStart = a.startIndex - b.startIndex;
-      if (byStart !== 0) return byStart;
-      return a.task.number - b.task.number;
-    });
+    group.bars = orderBarsWithParentIndent(group.bars);
   }
 
   const groups = [...groupsMap.values()].sort((a, b) => {

@@ -91,6 +91,7 @@ export type TaskInput = {
   category?: string | null;
   milestone?: string | null;
   parent_number?: number | null;
+  child_numbers?: number[];
   related_task_numbers?: number[];
 };
 

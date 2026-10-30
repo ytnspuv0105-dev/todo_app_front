@@ -119,6 +119,14 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(44, 106, 79, 0.14);
 }
 textarea { min-height: 110px; resize: vertical; }
+select[multiple] {
+  min-height: 8.5rem;
+  padding: 0.35rem 0.45rem;
+}
+.field-hint {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
 
 .btn {
   border: none;
@@ -1024,6 +1032,10 @@ a.task-number:hover {
   background: #f3f8f4;
 }
 
+.gantt-task-label.is-child {
+  padding-left: calc(0.75rem + var(--gantt-indent, 1) * 1.25rem);
+}
+
 .gantt-task-number {
   flex: 0 0 auto;
   font-weight: 600;
@@ -1342,6 +1354,10 @@ a.task-number:hover {
     padding-left: 0.4rem;
     padding-right: 0.4rem;
     overflow: hidden;
+  }
+
+  .gantt-task-label.is-child {
+    padding-left: calc(0.4rem + var(--gantt-indent, 1) * 0.75rem);
   }
 
   .gantt-bar-handle {
